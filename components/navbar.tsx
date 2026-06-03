@@ -2,17 +2,18 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { LanguageSelector } from '@/components/language-selector'
 import { useLanguage } from '@/lib/language-context'
 import { UserMenu } from '@/components/user-menu'
 import { Menu, X } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 export function Navbar() {
   const pathname = usePathname()
+  const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { t } = useLanguage()
 
@@ -23,6 +24,21 @@ export function Navbar() {
     { href: '/contact', label: 'Enterprise' },
   ]
 
+  // Prefetch all nav routes on mount for instant navigation
+  useEffect(() => {
+    navLinks.forEach(link => {
+      router.prefetch(link.href)
+    })
+    // Also prefetch auth routes
+    router.prefetch('/auth/login')
+    router.prefetch('/auth/sign-up')
+  }, [router])
+
+  // Prefetch on hover for even faster navigation
+  const handleMouseEnter = useCallback((href: string) => {
+    router.prefetch(href)
+  }, [router])
+
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -31,17 +47,17 @@ export function Navbar() {
           <Image
             src="/logo-dark.png"
             alt="TAED"
-            width={120}
-            height={40}
-            className="hidden h-8 sm:h-10 w-auto dark:block"
+            width={96}
+            height={32}
+            className="hidden dark:block"
             priority
           />
           <Image
             src="/logo-light.png"
             alt="TAED"
-            width={120}
-            height={40}
-            className="h-8 sm:h-10 w-auto dark:hidden"
+            width={96}
+            height={32}
+            className="dark:hidden"
             priority
           />
         </Link>
@@ -52,6 +68,7 @@ export function Navbar() {
             <Link
               key={link.href}
               href={link.href}
+              onMouseEnter={() => handleMouseEnter(link.href)}
               className={`text-sm font-medium transition-colors hover:text-primary ${
                 pathname === link.href ? 'text-primary' : 'text-muted-foreground'
               }`}

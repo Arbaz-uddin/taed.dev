@@ -16,10 +16,10 @@ import {
   ArrowRight, Lock, LogIn
 } from 'lucide-react'
 import type { Profile, SavedAPI, APICategory } from '@/lib/types/database'
+import { API_ERROR_CODES_SHORT } from '@/lib/api-error-codes'
 
 export default function APILibraryPage() {
   const router = useRouter()
-  const supabase = createClient()
   
   const [user, setUser] = useState<{ id: string; email: string } | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -36,6 +36,7 @@ export default function APILibraryPage() {
   }, [])
 
   const loadData = async () => {
+    const supabase = createClient()
     try {
       // Check auth status
       const { data: { user: authUser } } = await supabase.auth.getUser()
@@ -43,26 +44,18 @@ export default function APILibraryPage() {
       if (authUser) {
         setUser(authUser)
         
-        // Load profile
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', authUser.id)
-          .single()
+        // Load profile and user's APIs in parallel
+        const [profileResult, userAPIsResult] = await Promise.all([
+          supabase.from('profiles').select('*').eq('id', authUser.id).single(),
+          supabase.from('saved_apis').select('cloned_from').eq('user_id', authUser.id).not('cloned_from', 'is', null)
+        ])
         
-        if (profileData) {
-          setProfile(profileData)
+        if (profileResult.data) {
+          setProfile(profileResult.data)
         }
 
-        // Load user's existing APIs to check which library APIs they've already added
-        const { data: userAPIs } = await supabase
-          .from('saved_apis')
-          .select('cloned_from')
-          .eq('user_id', authUser.id)
-          .not('cloned_from', 'is', null)
-
-        if (userAPIs) {
-          const clonedIds = new Set(userAPIs.map(api => api.cloned_from).filter(Boolean) as string[])
+        if (userAPIsResult.data) {
+          const clonedIds = new Set(userAPIsResult.data.map(api => api.cloned_from).filter(Boolean) as string[])
           setAddedAPIs(clonedIds)
         }
       }
@@ -103,7 +96,12 @@ export default function APILibraryPage() {
     setAddingAPIId(libraryAPI.id)
 
     try {
-      // Clone the API
+      const supabase = createClient()
+      // Clone the API with error codes in description
+      const clonedDescription = libraryAPI.description 
+        ? `${libraryAPI.description} ${API_ERROR_CODES_SHORT}`
+        : `Cloned from library: ${libraryAPI.name}. ${API_ERROR_CODES_SHORT}`
+      
       const { data: clonedAPI, error } = await supabase
         .from('saved_apis')
         .insert({
@@ -112,7 +110,7 @@ export default function APILibraryPage() {
           name: libraryAPI.name,
           fields: libraryAPI.fields,
           is_library: false,
-          description: libraryAPI.description,
+          description: clonedDescription,
           category: libraryAPI.category,
           cloned_from: libraryAPI.id,
         })

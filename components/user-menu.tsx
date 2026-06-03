@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Wallet, LayoutDashboard, Settings, LogOut, Loader2 } from 'lucide-react'
+import { Wallet, LayoutDashboard, Settings, LogOut } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
 
 interface Profile {
@@ -36,81 +36,56 @@ export function UserMenu({
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
-  const [loading, setLoading] = useState(true)
-  const supabase = useMemo(() => createClient(), [])
+
+  const fetchUserAndProfile = useCallback(async () => {
+    const supabase = createClient()
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) return
+      
+      setUser(user)
+
+      // Fetch profile without blocking
+      supabase
+        .from('profiles')
+        .select('id, full_name, wallet_balance')
+        .eq('id', user.id)
+        .single()
+        .then(({ data }: { data: Profile | null }) => {
+          if (data) setProfile(data)
+        })
+    } catch {
+      // Silent fail - show login buttons
+    }
+  }, [])
 
   useEffect(() => {
-    let mounted = true
-    
-    // Timeout fallback to prevent infinite loading
-    const timeout = setTimeout(() => {
-      if (mounted && loading) {
-        setLoading(false)
-      }
-    }, 5000)
-
-    const fetchUserAndProfile = async () => {
-      try {
-        const { data: { user }, error } = await supabase.auth.getUser()
-        
-        if (!mounted) return
-        
-        if (error) {
-          setLoading(false)
-          return
-        }
-        
-        setUser(user)
-
-        if (user) {
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('id, full_name, wallet_balance')
-            .eq('id', user.id)
-            .single()
-
-          if (mounted) {
-            setProfile(profileData)
-          }
-        }
-      } catch (error) {
-        // Silently fail and show login buttons
-      } finally {
-        if (mounted) {
-          setLoading(false)
-        }
-      }
-    }
-
     fetchUserAndProfile()
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!mounted) return
-      
+    const supabase = createClient()
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: string, session: { user: User } | null) => {
       setUser(session?.user ?? null)
       if (session?.user) {
-        const { data: profileData } = await supabase
+        const { data } = await supabase
           .from('profiles')
           .select('id, full_name, wallet_balance')
           .eq('id', session.user.id)
           .single()
-        if (mounted) {
-          setProfile(profileData)
-        }
+        if (data) setProfile(data)
       } else {
         setProfile(null)
       }
     })
 
-    return () => {
-      mounted = false
-      clearTimeout(timeout)
-      subscription.unsubscribe()
-    }
-  }, [supabase, loading])
+    return () => subscription.unsubscribe()
+  }, [fetchUserAndProfile])
 
   const handleSignOut = async () => {
+    const supabase = createClient()
     await supabase.auth.signOut()
+    setUser(null)
+    setProfile(null)
     router.push('/')
     router.refresh()
   }
@@ -122,14 +97,7 @@ export function UserMenu({
     return email?.slice(0, 2).toUpperCase() || 'U'
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center gap-2">
-        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-      </div>
-    )
-  }
-
+  // Show login buttons immediately - no loading state
   if (!user) {
     if (!showLoginButtons) return null
     

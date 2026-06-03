@@ -35,16 +35,11 @@ export default function HomePage() {
   useEffect(() => {
     setMounted(true)
     
+    // Non-blocking auth check
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user)
     })
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null)
-    })
-
-    return () => subscription.unsubscribe()
   }, [])
 
   const logoSrc = mounted && resolvedTheme === 'light' ? '/logo-light.png' : '/logo-dark.png'

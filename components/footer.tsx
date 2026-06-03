@@ -14,20 +14,22 @@ export function Footer() {
         <div className="grid grid-cols-2 gap-6 sm:gap-8 md:grid-cols-4">
           {/* Logo & Description */}
           <div className="col-span-2 md:col-span-1">
-            <Image
-              src="/logo-dark.png"
-              alt="TAED"
-              width={120}
-              height={40}
-              className="hidden h-8 sm:h-10 w-auto mb-4 dark:block"
-            />
-            <Image
-              src="/logo-light.png"
-              alt="TAED"
-              width={120}
-              height={40}
-              className="h-8 sm:h-10 w-auto mb-4 dark:hidden"
-            />
+            <Link href="/">
+              <Image
+                src="/logo-dark.png"
+                alt="TAED"
+                width={120}
+                height={40}
+                className="hidden mb-4 dark:block"
+              />
+              <Image
+                src="/logo-light.png"
+                alt="TAED"
+                width={120}
+                height={40}
+                className="mb-4 dark:hidden"
+              />
+            </Link>
             <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
               The Vision Layer for Modern Apps. Chain visual logic, define JSON schemas, and deploy production-grade vision engines.
             </p>
@@ -94,9 +96,14 @@ export function Footer() {
         </div>
 
         <div className="mt-8 sm:mt-12 border-t border-border pt-6 sm:pt-8 flex flex-col md:flex-row justify-between items-center gap-3 sm:gap-4">
-          <p className="text-xs sm:text-sm text-muted-foreground text-center md:text-left">
-            &copy; {new Date().getFullYear()} TAED. {t.footer.copyright}
-          </p>
+          <div className="text-center md:text-left">
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              &copy; {new Date().getFullYear()} TAED. {t.footer.copyright}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Taed.dev is a property of Metavolv Technologies LLC, UAE
+            </p>
+          </div>
           <p className="text-xs sm:text-sm text-muted-foreground">
             Built for high-velocity engineering teams
           </p>

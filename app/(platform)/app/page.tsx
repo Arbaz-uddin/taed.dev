@@ -4,11 +4,12 @@ import { useState, useCallback, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { Upload, Plus, X, FileText, Loader2, Copy, Check, Lock, Unlock, Terminal, Save, Trash2, Play, ChevronDown, ChevronUp, FilePlus2, LogOut, Users, Settings, Shield, Info, Wallet, AlertTriangle, Library } from 'lucide-react'
+import { Upload, Plus, X, FileText, Loader2, Copy, Check, Lock, Unlock, Terminal, Save, Trash2, Play, ChevronDown, ChevronUp, FilePlus2, LogOut, Users, Settings, Shield, Info, Wallet, AlertTriangle, Library, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Table,
@@ -35,7 +36,9 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Switch } from '@/components/ui/switch'
-import type { Profile, SavedAPI, Team } from '@/lib/types/database'
+import { ModelSelector } from '@/components/model-selector'
+import { API_ERROR_CODES_SHORT } from '@/lib/api-error-codes'
+import type { Profile, SavedAPI, Team, ModelConfig } from '@/lib/types/database'
 
 interface ExtractionField {
   id: string
@@ -63,6 +66,7 @@ interface LocalSavedAPI {
   id: string
   name: string
   fields: { name: string; description: string }[]
+  description?: string | null
   createdAt: string
   userId?: string
   teamId?: string | null
@@ -88,6 +92,13 @@ function OCREngineContent() {
   const [showCurlDialog, setShowCurlDialog] = useState(false)
   const [includeMetadata, setIncludeMetadata] = useState(true)
   
+  // Model configuration state
+  const [modelConfig, setModelConfig] = useState<ModelConfig>({
+    provider: 'OPENAI',
+    model: 'gpt-4o-mini',
+    isCustom: false,
+  })
+  
   // API management state
   const [showSaveDialog, setShowSaveDialog] = useState(false)
   const [apiName, setApiName] = useState('')
@@ -95,6 +106,11 @@ function OCREngineContent() {
   const [activeAPIId, setActiveAPIId] = useState<string | null>(null)
   const [showMyAPIs, setShowMyAPIs] = useState(true)
   const [loadingAPIs, setLoadingAPIs] = useState(true)
+  
+  // Edit API description state (admin only)
+  const [editingAPIId, setEditingAPIId] = useState<string | null>(null)
+  const [editDescription, setEditDescription] = useState('')
+  const [savingDescription, setSavingDescription] = useState(false)
 
   // Auth state
   const [user, setUser] = useState<{ id: string; email: string } | null>(null)
@@ -103,7 +119,6 @@ function OCREngineContent() {
   const [authLoading, setAuthLoading] = useState(true)
 
   const router = useRouter()
-  const supabase = createClient()
 
   // Check auth and load user data
 useEffect(() => {
@@ -116,6 +131,8 @@ useEffect(() => {
     setTimeout(() => setEmailVerified(false), 5000)
   }
   
+  const supabase = createClient()
+  
   const checkAuth = async () => {
       try {
         const { data: { user: authUser } } = await supabase.auth.getUser()
@@ -127,28 +144,41 @@ useEffect(() => {
 
         setUser({ id: authUser.id, email: authUser.email || '' })
 
-        // Load profile
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', authUser.id)
-          .single()
+        // Load profile, team, and APIs all in parallel for faster loading
+        const profilePromise = supabase.from('profiles').select('*').eq('id', authUser.id).single()
+        const apisPromise = supabase.from('saved_apis').select('*').order('created_at', { ascending: false })
 
-        if (profileData) {
-          setProfile(profileData)
+        const [profileResult, apisResult] = await Promise.all([profilePromise, apisPromise])
 
-          // Load team if user has one
-          if (profileData.team_id) {
-            const { data: teamData } = await supabase
+        if (profileResult.data) {
+          setProfile(profileResult.data)
+
+          // Load team in background if user has one (non-blocking)
+          if (profileResult.data.team_id) {
+            supabase
               .from('teams')
               .select('*')
-              .eq('id', profileData.team_id)
+              .eq('id', profileResult.data.team_id)
               .single()
-            
-            if (teamData) {
-              setTeam(teamData)
-            }
+              .then(({ data: teamData }) => {
+                if (teamData) setTeam(teamData)
+              })
           }
+        }
+
+        if (apisResult.data) {
+          setSavedAPIs(apisResult.data.map((api: SavedAPI) => ({
+            id: api.id,
+            name: api.name,
+            fields: api.fields as { name: string; description: string }[],
+            description: api.description,
+            createdAt: api.created_at,
+            userId: api.user_id,
+            teamId: api.team_id,
+            ownerName: api.user_id === authUser.id ? 'Me' : 'Team Member',
+            clonedFrom: api.cloned_from,
+          })))
+          setLoadingAPIs(false)
         }
       } catch (err) {
         console.error('Auth error:', err)
@@ -167,49 +197,10 @@ useEffect(() => {
     })
 
     return () => subscription.unsubscribe()
-  }, [router, supabase])
-
-  // Load saved APIs from Supabase
-  useEffect(() => {
-    const loadAPIs = async () => {
-      if (!user) return
-
-      setLoadingAPIs(true)
-      try {
-        // Get user's own APIs (and team APIs if user has a team)
-        const { data: apis, error: apisError } = await supabase
-          .from('saved_apis')
-          .select('*')
-          .order('created_at', { ascending: false })
-
-        if (apisError) {
-          setLoadingAPIs(false)
-          return
-        }
-
-  if (apis) {
-  setSavedAPIs(apis.map((api: SavedAPI) => ({
-  id: api.id,
-  name: api.name,
-  fields: api.fields as { name: string; description: string }[],
-  createdAt: api.created_at,
-  userId: api.user_id,
-  teamId: api.team_id,
-  ownerName: api.user_id === user.id ? 'Me' : 'Team Member',
-  clonedFrom: api.cloned_from,
-  })))
-        }
-      } catch {
-        // Error loading APIs silently
-      } finally {
-        setLoadingAPIs(false)
-      }
-    }
-
-    loadAPIs()
-  }, [user, supabase])
+  }, [router, searchParams])
 
   const handleSignOut = async () => {
+    const supabase = createClient()
     await supabase.auth.signOut()
     router.push('/auth/login')
   }
@@ -369,6 +360,17 @@ useEffect(() => {
         'fields',
         JSON.stringify(validFields.map((f) => ({ name: f.name, description: f.description })))
       )
+      
+      // Add model configuration
+      formData.append('provider', modelConfig.provider)
+      formData.append('model', modelConfig.model)
+      formData.append('isCustom', String(modelConfig.isCustom))
+      if (modelConfig.customEndpointUrl) {
+        formData.append('customEndpointUrl', modelConfig.customEndpointUrl)
+      }
+      if (modelConfig.customModelAuthKeyEnvVar) {
+        formData.append('customAuthKeyEnvVar', modelConfig.customModelAuthKeyEnvVar)
+      }
 
       const response = await fetch('/api/extract', {
         method: 'POST',
@@ -378,8 +380,8 @@ useEffect(() => {
       const data = await response.json()
       const processingTime = Date.now() - startTime
 
-      // Log usage
-      await supabase.from('api_usage_logs').insert({
+      // Log usage (non-blocking)
+      createClient().from('api_usage_logs').insert({
         user_id: user.id,
         api_id: activeAPIId,
         team_id: profile?.team_id,
@@ -432,7 +434,11 @@ useEffect(() => {
     
     const validFields = fields.filter((f) => f.name.trim() && f.description.trim())
     
+    // Auto-generate description with error codes
+    const autoDescription = `Extraction API for ${apiName.trim()}. Fields: ${validFields.map(f => f.name).join(', ')}. ${API_ERROR_CODES_SHORT}`
+    
     try {
+      const supabase = createClient()
       const { data: newAPI, error: insertError } = await supabase
         .from('saved_apis')
         .insert({
@@ -440,6 +446,7 @@ useEffect(() => {
           team_id: profile?.team_id || null,
           name: apiName.trim(),
           fields: validFields.map((f) => ({ name: f.name, description: f.description })),
+          description: autoDescription,
         })
         .select()
         .single()
@@ -452,6 +459,7 @@ useEffect(() => {
         id: newAPI.id,
         name: newAPI.name,
         fields: newAPI.fields as { name: string; description: string }[],
+        description: newAPI.description,
         createdAt: newAPI.created_at,
         userId: newAPI.user_id,
         teamId: newAPI.team_id,
@@ -486,6 +494,7 @@ useEffect(() => {
     }
 
     try {
+      const supabase = createClient()
       const { error: deleteError } = await supabase
         .from('saved_apis')
         .delete()
@@ -501,6 +510,36 @@ useEffect(() => {
     } catch (err) {
       console.error('Error deleting API:', err)
       setError('Failed to delete API')
+    }
+  }
+
+  // Admin only: Save API description
+  const handleSaveDescription = async (apiId: string) => {
+    if (profile?.role !== 'super_admin') {
+      setError('Only admins can edit API descriptions')
+      return
+    }
+
+    setSavingDescription(true)
+    try {
+      const supabase = createClient()
+      const { error: updateError } = await supabase
+        .from('saved_apis')
+        .update({ description: editDescription })
+        .eq('id', apiId)
+
+      if (updateError) throw updateError
+
+      setSavedAPIs(savedAPIs.map(api => 
+        api.id === apiId ? { ...api, description: editDescription } : api
+      ))
+      setEditingAPIId(null)
+      setEditDescription('')
+    } catch (err) {
+      console.error('Error updating description:', err)
+      setError('Failed to update description')
+    } finally {
+      setSavingDescription(false)
     }
   }
 
@@ -582,13 +621,13 @@ return (
   {/* Header */}
   <header className="border-b border-border bg-card">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-3">
             <img src="/logo-dark.png" alt="TAED" className="h-8 w-auto hidden dark:block" />
             <img src="/logo-light.png" alt="TAED" className="h-8 w-auto dark:hidden" />
             {team && (
               <span className="text-xs text-muted-foreground border-l border-border pl-3">Team: {team.name}</span>
             )}
-          </div>
+          </Link>
 
           <div className="flex items-center gap-2">
             {/* Wallet Balance Display */}
@@ -761,17 +800,67 @@ return (
   )}
   </div>
   </div>
-                        {api.userId === user?.id && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100"
-                            onClick={() => handleDeleteAPI(api.id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                          </Button>
-                        )}
+                        <div className="flex gap-1">
+                          {profile?.role === 'super_admin' && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100"
+                              onClick={() => {
+                                setEditingAPIId(api.id)
+                                setEditDescription(api.description || '')
+                              }}
+                            >
+                              <Pencil className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                            </Button>
+                          )}
+                          {api.userId === user?.id && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100"
+                              onClick={() => handleDeleteAPI(api.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
+                      
+                      {/* Description display or edit */}
+                      {editingAPIId === api.id ? (
+                        <div className="mb-3 space-y-2">
+                          <Textarea
+                            placeholder="Enter API description..."
+                            value={editDescription}
+                            onChange={(e) => setEditDescription(e.target.value)}
+                            className="min-h-[60px] text-xs"
+                          />
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => handleSaveDescription(api.id)}
+                              disabled={savingDescription}
+                            >
+                              {savingDescription ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                              <span className="ml-1">Save</span>
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setEditingAPIId(null)
+                                setEditDescription('')
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : api.description ? (
+                        <p className="mb-3 text-xs text-muted-foreground line-clamp-2">{api.description}</p>
+                      ) : null}
+                      
                       <div className="mb-3 flex flex-wrap gap-1">
                         {api.fields.slice(0, 3).map((field, idx) => (
                           <span
@@ -1015,6 +1104,15 @@ return (
                   />
                 </div>
 
+                {/* Model Configuration */}
+                <ModelSelector
+                  value={modelConfig}
+                  onChange={setModelConfig}
+                  fileSizeBytes={file?.size || 0}
+                  fieldCount={fields.filter(f => f.name.trim()).length}
+                  disabled={isLocked}
+                />
+
                 {/* Estimated Cost Display */}
                 {file && fields.filter(f => f.name.trim()).length > 0 && (
                   <div className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
@@ -1059,6 +1157,11 @@ return (
                     'Extract Data'
                   )}
                 </Button>
+                
+                {/* Data Privacy Notice */}
+                <p className="mt-3 text-xs text-muted-foreground text-center leading-relaxed">
+                  All models pre-integrated in Taed.dev operate on a No Data Sharing policy and your data is not stored anywhere. All data is purged once the operation is completed.
+                </p>
               </CardContent>
             </Card>
           </div>
