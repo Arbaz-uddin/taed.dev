@@ -153,9 +153,9 @@ function getRecommendation(fileSizeBytes: number, fieldCount: number): {
   // Small files (<1MB) with simple fields - recommend cost-effective options
   if (fileSizeMB < 1 && fieldCount <= 5) {
     return {
-      provider: 'DEEPSEEK',
-      model: 'deepseek-chat',
-      reason: 'Optimal Cost & Latency Performance'
+      provider: 'ANTHROPIC',
+      model: 'claude-3-5-haiku-latest',
+      reason: 'Fast & Accurate for Simple Documents'
     }
   }
   
