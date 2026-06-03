@@ -4,11 +4,13 @@ import { createClient } from '@supabase/supabase-js'
 import { executeExtraction, ExtractionError, ERROR_CODES } from '@/lib/llm-orchestrator'
 import type { ModelProvider } from '@/lib/types/database'
 
-// Create admin client for API key validation (bypasses RLS)
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+// Helper to create admin client lazily (not at module level to avoid build errors)
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export async function POST(request: Request) {
   const startTime = Date.now()
@@ -22,7 +24,7 @@ export async function POST(request: Request) {
     }
 
     // Validate API key and get user with wallet balance
-    const { data: profile, error: profileError } = await supabaseAdmin
+    const { data: profile, error: profileError } = await getSupabaseAdmin()
       .from('profiles')
       .select('id, team_id, wallet_balance')
       .eq('api_key', apiKey)
@@ -56,7 +58,7 @@ export async function POST(request: Request) {
     }
 
     // Get saved API configuration
-    const { data: savedApi, error: apiError } = await supabaseAdmin
+    const { data: savedApi, error: apiError } = await getSupabaseAdmin()
       .from('saved_apis')
       .select('*')
       .eq('id', apiId)
@@ -125,7 +127,7 @@ export async function POST(request: Request) {
     }
 
     // Deduct from wallet
-    const { error: walletError } = await supabaseAdmin
+    const { error: walletError } = await getSupabaseAdmin()
       .from('profiles')
       .update({ wallet_balance: newBalance })
       .eq('id', profile.id)
@@ -135,7 +137,7 @@ export async function POST(request: Request) {
     }
 
     // Log usage with cost and model info
-    const { data: usageLog } = await supabaseAdmin.from('api_usage_logs').insert({
+    const { data: usageLog } = await getSupabaseAdmin().from('api_usage_logs').insert({
       user_id: profile.id,
       api_id: apiId,
       team_id: profile.team_id,
@@ -150,7 +152,7 @@ export async function POST(request: Request) {
     }).select().single()
 
     // Record transaction
-    await supabaseAdmin.from('wallet_transactions').insert({
+    await getSupabaseAdmin().from('wallet_transactions').insert({
       user_id: profile.id,
       amount: -result.cost,
       type: 'debit',

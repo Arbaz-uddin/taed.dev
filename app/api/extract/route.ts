@@ -4,11 +4,13 @@ import { createServerClient } from '@supabase/ssr'
 import { executeExtraction, ExtractionError, ERROR_CODES } from '@/lib/llm-orchestrator'
 import type { ModelProvider } from '@/lib/types/database'
 
-// Create admin client for wallet operations
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+// Helper to create admin client lazily (not at module level to avoid build errors)
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export async function POST(req: Request) {
   try {
@@ -33,7 +35,7 @@ export async function POST(req: Request) {
     }
 
     // Get user's wallet balance
-    const { data: profile } = await supabaseAdmin
+    const { data: profile } = await getSupabaseAdmin()
       .from('profiles')
       .select('wallet_balance, team_id')
       .eq('id', user.id)
@@ -77,7 +79,7 @@ export async function POST(req: Request) {
     // Get custom API key from vault if using enterprise custom model
     let customApiKey: string | null = null
     if (isCustom && customAuthKeyEnvVar) {
-      const { data: vaultKey } = await supabaseAdmin
+      const { data: vaultKey } = await getSupabaseAdmin()
         .from('enterprise_vault_keys')
         .select('encrypted_key_reference')
         .eq('user_id', user.id)
@@ -122,13 +124,13 @@ export async function POST(req: Request) {
     }
 
     // Deduct from wallet
-    await supabaseAdmin
+    await getSupabaseAdmin()
       .from('profiles')
       .update({ wallet_balance: newBalance })
       .eq('id', user.id)
 
     // Log usage with model info
-    const { data: usageLog } = await supabaseAdmin.from('api_usage_logs').insert({
+    const { data: usageLog } = await getSupabaseAdmin().from('api_usage_logs').insert({
       user_id: user.id,
       team_id: profile.team_id,
       file_name: file.name,
@@ -140,7 +142,7 @@ export async function POST(req: Request) {
     }).select().single()
 
     // Record transaction
-    await supabaseAdmin.from('wallet_transactions').insert({
+    await getSupabaseAdmin().from('wallet_transactions').insert({
       user_id: user.id,
       amount: -result.cost,
       type: 'debit',
