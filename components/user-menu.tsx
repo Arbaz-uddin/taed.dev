@@ -52,7 +52,7 @@ export function UserMenu({
         .select('id, full_name, wallet_balance')
         .eq('id', user.id)
         .single()
-        .then(({ data }) => {
+        .then(({ data }: { data: Profile | null }) => {
           if (data) setProfile(data)
         })
     } catch {
@@ -64,7 +64,7 @@ export function UserMenu({
     fetchUserAndProfile()
 
     const supabase = createClient()
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: string, session: { user: User } | null) => {
       setUser(session?.user ?? null)
       if (session?.user) {
         const { data } = await supabase
