@@ -47,16 +47,16 @@ export function Navbar() {
           <Image
             src="/logo-dark.png"
             alt="TAED"
-            width={120}
-            height={40}
+            width={96}
+            height={32}
             className="hidden dark:block"
             priority
           />
           <Image
             src="/logo-light.png"
             alt="TAED"
-            width={120}
-            height={40}
+            width={96}
+            height={32}
             className="dark:hidden"
             priority
           />
