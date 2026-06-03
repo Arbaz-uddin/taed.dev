@@ -1,13 +1,8 @@
-import { generateText, Output } from 'ai'
-import { z } from 'zod'
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
-
-// OpenAI GPT-4o-mini pricing per 1M tokens
-const INPUT_COST_PER_1M = 0.15
-const OUTPUT_COST_PER_1M = 0.60
-const MARKUP = 1.30 // 30% markup
+import { executeExtraction } from '@/lib/llm-orchestrator'
+import type { ModelProvider } from '@/lib/types/database'
 
 // Create admin client for wallet operations
 const supabaseAdmin = createClient(
@@ -40,7 +35,7 @@ export async function POST(req: Request) {
     // Get user's wallet balance
     const { data: profile } = await supabaseAdmin
       .from('profiles')
-      .select('wallet_balance')
+      .select('wallet_balance, team_id')
       .eq('id', user.id)
       .single()
 
@@ -56,6 +51,13 @@ export async function POST(req: Request) {
     const formData = await req.formData()
     const file = formData.get('file') as File
     const fieldsJson = formData.get('fields') as string
+    
+    // Model configuration from request (with defaults)
+    const provider = (formData.get('provider') as ModelProvider) || 'OPENAI'
+    const model = (formData.get('model') as string) || 'gpt-4o-mini'
+    const isCustom = formData.get('isCustom') === 'true'
+    const customEndpointUrl = formData.get('customEndpointUrl') as string | null
+    const customAuthKeyEnvVar = formData.get('customAuthKeyEnvVar') as string | null
 
     if (!file) {
       return Response.json({ error: 'No file uploaded' }, { status: 400 })
@@ -72,67 +74,47 @@ export async function POST(req: Request) {
     const base64 = Buffer.from(bytes).toString('base64')
     const mimeType = file.type || 'image/png'
 
-    // Build dynamic schema based on user-defined fields
-    const schemaShape: Record<string, z.ZodString | z.ZodOptional<z.ZodString>> = {}
-    for (const field of fields) {
-      schemaShape[field.name] = z.string().nullable().describe(field.description)
+    // Get custom API key from vault if using enterprise custom model
+    let customApiKey: string | null = null
+    if (isCustom && customAuthKeyEnvVar) {
+      const { data: vaultKey } = await supabaseAdmin
+        .from('enterprise_vault_keys')
+        .select('encrypted_key_reference')
+        .eq('user_id', user.id)
+        .eq('key_name', customAuthKeyEnvVar)
+        .single()
+      
+      if (vaultKey) {
+        // In production, this would decrypt the key from a secure vault
+        // For now, we'll use the reference as the key (should be encrypted)
+        customApiKey = vaultKey.encrypted_key_reference
+      }
     }
-    const extractionSchema = z.object(schemaShape)
 
-    // Build field descriptions for the prompt
-    const fieldDescriptions = fields
-      .map((f) => `- ${f.name}: ${f.description}`)
-      .join('\n')
-
-    const result = await generateText({
-      model: 'openai/gpt-4o-mini',
-      output: Output.object({ schema: extractionSchema }),
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              image: `data:${mimeType};base64,${base64}`,
-            },
-            {
-              type: 'text',
-              text: `You are an OCR extraction expert. Analyze this document/image and extract the following information.
-
-Fields to extract:
-${fieldDescriptions}
-
-Important instructions:
-1. Extract the exact text as it appears in the document
-2. If a field is not found in the document, return null for that field
-3. Be precise and accurate with the extraction
-4. For dates, preserve the original format
-5. For numbers, preserve formatting (commas, decimals, currency symbols)
-
-Return the extracted data as a JSON object.`,
-            },
-          ],
-        },
-      ],
-    })
-
-    // Calculate actual cost based on token usage
-    const inputTokens = result.usage?.promptTokens || 0
-    const outputTokens = result.usage?.completionTokens || 0
-    
-    const inputCost = (inputTokens / 1_000_000) * INPUT_COST_PER_1M
-    const outputCost = (outputTokens / 1_000_000) * OUTPUT_COST_PER_1M
-    const totalCost = (inputCost + outputCost) * MARKUP
-    const finalCost = Math.max(totalCost, 0.0001) // Minimum cost
+    // Execute extraction with the orchestrator
+    const result = await executeExtraction(
+      {
+        provider,
+        model,
+        isCustom,
+        customEndpointUrl,
+        customApiKey,
+      },
+      {
+        base64Image: base64,
+        mimeType,
+        fields,
+      }
+    )
 
     // Check if user has enough balance for the actual cost
     const currentBalance = Number(profile.wallet_balance)
-    const newBalance = currentBalance - finalCost
+    const newBalance = currentBalance - result.cost
     
     if (newBalance < 0) {
       return Response.json({ 
         error: 'Insufficient wallet balance for this extraction.',
-        cost: finalCost.toFixed(6),
+        cost: result.cost.toFixed(6),
         wallet_balance: profile.wallet_balance,
         action_required: 'add_funds',
         contact_url: '/contact'
@@ -145,31 +127,39 @@ Return the extracted data as a JSON object.`,
       .update({ wallet_balance: newBalance })
       .eq('id', user.id)
 
-    // Log usage with cost
+    // Log usage with model info
     const { data: usageLog } = await supabaseAdmin.from('api_usage_logs').insert({
       user_id: user.id,
+      team_id: profile.team_id,
       file_name: file.name,
       file_type: file.type,
       success: true,
-      cost: finalCost,
+      cost: result.cost,
+      model_provider: provider,
+      model_name: model,
     }).select().single()
 
     // Record transaction
     await supabaseAdmin.from('wallet_transactions').insert({
       user_id: user.id,
-      amount: -finalCost,
+      amount: -result.cost,
       type: 'debit',
-      description: `Dashboard extraction: ${file.name}`,
+      description: `Extraction via ${provider}/${model}: ${file.name}`,
       api_log_id: usageLog?.id,
       balance_after: newBalance,
     })
 
     return Response.json({
       success: true,
-      data: result.output,
+      data: result.data,
       fields: fields.map((f) => f.name),
-      cost: finalCost.toFixed(6),
+      cost: result.cost.toFixed(6),
       wallet_balance: newBalance.toFixed(4),
+      model: {
+        provider,
+        model,
+      },
+      usage: result.usage,
     })
   } catch (error) {
     console.error('Extraction error:', error)

@@ -35,7 +35,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Switch } from '@/components/ui/switch'
-import type { Profile, SavedAPI, Team } from '@/lib/types/database'
+import { ModelSelector } from '@/components/model-selector'
+import type { Profile, SavedAPI, Team, ModelConfig } from '@/lib/types/database'
 
 interface ExtractionField {
   id: string
@@ -87,6 +88,13 @@ function OCREngineContent() {
   const [isLocked, setIsLocked] = useState(false)
   const [showCurlDialog, setShowCurlDialog] = useState(false)
   const [includeMetadata, setIncludeMetadata] = useState(true)
+  
+  // Model configuration state
+  const [modelConfig, setModelConfig] = useState<ModelConfig>({
+    provider: 'OPENAI',
+    model: 'gpt-4o-mini',
+    isCustom: false,
+  })
   
   // API management state
   const [showSaveDialog, setShowSaveDialog] = useState(false)
@@ -371,6 +379,17 @@ useEffect(() => {
         'fields',
         JSON.stringify(validFields.map((f) => ({ name: f.name, description: f.description })))
       )
+      
+      // Add model configuration
+      formData.append('provider', modelConfig.provider)
+      formData.append('model', modelConfig.model)
+      formData.append('isCustom', String(modelConfig.isCustom))
+      if (modelConfig.customEndpointUrl) {
+        formData.append('customEndpointUrl', modelConfig.customEndpointUrl)
+      }
+      if (modelConfig.customModelAuthKeyEnvVar) {
+        formData.append('customAuthKeyEnvVar', modelConfig.customModelAuthKeyEnvVar)
+      }
 
       const response = await fetch('/api/extract', {
         method: 'POST',
@@ -1016,6 +1035,15 @@ return (
                     onCheckedChange={setIncludeMetadata}
                   />
                 </div>
+
+                {/* Model Configuration */}
+                <ModelSelector
+                  value={modelConfig}
+                  onChange={setModelConfig}
+                  fileSizeBytes={file?.size || 0}
+                  fieldCount={fields.filter(f => f.name.trim()).length}
+                  disabled={isLocked}
+                />
 
                 {/* Estimated Cost Display */}
                 {file && fields.filter(f => f.name.trim()).length > 0 && (

@@ -1,5 +1,15 @@
 export type UserRole = 'user' | 'super_admin'
 
+export type ModelProvider = 'OPENAI' | 'GEMINI' | 'DEEPSEEK' | 'CUSTOM'
+
+export interface ModelConfig {
+  provider: ModelProvider
+  model: string
+  isCustom: boolean
+  customEndpointUrl?: string
+  customModelAuthKeyEnvVar?: string
+}
+
 export interface Profile {
   id: string
   email: string
@@ -38,6 +48,12 @@ export interface SavedAPI {
   description: string | null
   category: string | null
   cloned_from: string | null
+  // Model configuration
+  selected_provider: ModelProvider
+  selected_model: string
+  is_custom_model: boolean
+  custom_endpoint_url: string | null
+  custom_model_auth_key_env_var: string | null
   created_at: string
   updated_at: string
 }
