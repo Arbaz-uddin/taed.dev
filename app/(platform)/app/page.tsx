@@ -621,13 +621,13 @@ return (
   {/* Header */}
   <header className="border-b border-border bg-card">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-3">
             <img src="/logo-dark.png" alt="TAED" className="h-8 w-auto hidden dark:block" />
             <img src="/logo-light.png" alt="TAED" className="h-8 w-auto dark:hidden" />
             {team && (
               <span className="text-xs text-muted-foreground border-l border-border pl-3">Team: {team.name}</span>
             )}
-          </div>
+          </Link>
 
           <div className="flex items-center gap-2">
             {/* Wallet Balance Display */}
@@ -1157,6 +1157,11 @@ return (
                     'Extract Data'
                   )}
                 </Button>
+                
+                {/* Data Privacy Notice */}
+                <p className="mt-3 text-xs text-muted-foreground text-center leading-relaxed">
+                  All models pre-integrated in Taed.dev operate on a No Data Sharing policy and your data is not stored anywhere. All data is purged once the operation is completed.
+                </p>
               </CardContent>
             </Card>
           </div>

@@ -96,9 +96,14 @@ export function Footer() {
         </div>
 
         <div className="mt-8 sm:mt-12 border-t border-border pt-6 sm:pt-8 flex flex-col md:flex-row justify-between items-center gap-3 sm:gap-4">
-          <p className="text-xs sm:text-sm text-muted-foreground text-center md:text-left">
-            &copy; {new Date().getFullYear()} TAED. {t.footer.copyright}
-          </p>
+          <div className="text-center md:text-left">
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              &copy; {new Date().getFullYear()} TAED. {t.footer.copyright}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Taed.dev is a property of Metavolv Technologies LLC, UAE
+            </p>
+          </div>
           <p className="text-xs sm:text-sm text-muted-foreground">
             Built for high-velocity engineering teams
           </p>
