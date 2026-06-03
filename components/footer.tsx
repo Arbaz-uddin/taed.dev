@@ -19,14 +19,16 @@ export function Footer() {
               alt="TAED"
               width={120}
               height={40}
-              className="hidden h-8 sm:h-10 w-auto mb-4 dark:block"
+              className="hidden h-8 sm:h-10 mb-4 dark:block"
+              style={{ width: 'auto', height: 'auto' }}
             />
             <Image
               src="/logo-light.png"
               alt="TAED"
               width={120}
               height={40}
-              className="h-8 sm:h-10 w-auto mb-4 dark:hidden"
+              className="h-8 sm:h-10 mb-4 dark:hidden"
+              style={{ width: 'auto', height: 'auto' }}
             />
             <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
               The Vision Layer for Modern Apps. Chain visual logic, define JSON schemas, and deploy production-grade vision engines.

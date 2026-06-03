@@ -49,7 +49,8 @@ export function Navbar() {
             alt="TAED"
             width={120}
             height={40}
-            className="hidden h-8 sm:h-10 w-auto dark:block"
+            className="hidden h-8 sm:h-10 dark:block"
+            style={{ width: 'auto', height: 'auto' }}
             priority
           />
           <Image
@@ -57,7 +58,8 @@ export function Navbar() {
             alt="TAED"
             width={120}
             height={40}
-            className="h-8 sm:h-10 w-auto dark:hidden"
+            className="h-8 sm:h-10 dark:hidden"
+            style={{ width: 'auto', height: 'auto' }}
             priority
           />
         </Link>
