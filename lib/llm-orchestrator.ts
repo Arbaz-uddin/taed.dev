@@ -54,8 +54,11 @@ export const MODEL_PRICING: Record<string, { input: number; output: number }> = 
   'claude-sonnet-4-20250514': { input: 3.00, output: 15.00 },
 }
 
-// Markup percentage
-const MARKUP = 1.30
+// Markup percentage (100% margin = 2x cost)
+const MARKUP = 2.00
+
+// Minimum cost per extraction in USD
+const MINIMUM_COST = 0.01
 
 // Map provider + model to Vercel AI Gateway model string
 function getGatewayModel(provider: ModelProvider, model: string): string {
@@ -142,7 +145,8 @@ function calculateCost(
   const inputCost = (promptTokens / 1_000_000) * pricing.input
   const outputCost = (completionTokens / 1_000_000) * pricing.output
   const totalCost = (inputCost + outputCost) * MARKUP
-  return Math.max(totalCost, 0.0001) // Minimum cost
+  // Enforce minimum cost of $0.01 per extraction
+  return Math.max(totalCost, MINIMUM_COST)
 }
 
 // Execute extraction using standard providers via Vercel AI Gateway
