@@ -14,22 +14,22 @@ export function Footer() {
         <div className="grid grid-cols-2 gap-6 sm:gap-8 md:grid-cols-4">
           {/* Logo & Description */}
           <div className="col-span-2 md:col-span-1">
-            <Image
-              src="/logo-dark.png"
-              alt="TAED"
-              width={120}
-              height={40}
-              className="hidden h-8 sm:h-10 mb-4 dark:block"
-              style={{ width: 'auto', height: 'auto' }}
-            />
-            <Image
-              src="/logo-light.png"
-              alt="TAED"
-              width={120}
-              height={40}
-              className="h-8 sm:h-10 mb-4 dark:hidden"
-              style={{ width: 'auto', height: 'auto' }}
-            />
+            <Link href="/">
+              <Image
+                src="/logo-dark.png"
+                alt="TAED"
+                width={120}
+                height={40}
+                className="hidden mb-4 dark:block"
+              />
+              <Image
+                src="/logo-light.png"
+                alt="TAED"
+                width={120}
+                height={40}
+                className="mb-4 dark:hidden"
+              />
+            </Link>
             <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
               The Vision Layer for Modern Apps. Chain visual logic, define JSON schemas, and deploy production-grade vision engines.
             </p>
