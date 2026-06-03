@@ -1,6 +1,6 @@
 export type UserRole = 'user' | 'super_admin'
 
-export type ModelProvider = 'OPENAI' | 'GEMINI' | 'DEEPSEEK' | 'CUSTOM'
+export type ModelProvider = 'OPENAI' | 'GEMINI' | 'ANTHROPIC' | 'CUSTOM'
 
 export interface ModelConfig {
   provider: ModelProvider

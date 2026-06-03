@@ -1,6 +1,6 @@
 -- Add model provider enum type
 DO $$ BEGIN
-    CREATE TYPE model_provider AS ENUM ('OPENAI', 'GEMINI', 'DEEPSEEK', 'CUSTOM');
+    CREATE TYPE model_provider AS ENUM ('OPENAI', 'GEMINI', 'ANTHROPIC', 'CUSTOM');
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;

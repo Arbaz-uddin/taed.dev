@@ -80,26 +80,26 @@ export const MODEL_PROVIDERS = {
       },
     ]
   },
-  DEEPSEEK: {
-    name: 'DeepSeek',
+  ANTHROPIC: {
+    name: 'Anthropic',
     models: [
       { 
-        id: 'deepseek-chat', 
-        name: 'DeepSeek Chat', 
-        inputCost: 0.14, 
-        outputCost: 0.28,
-        contextWindow: 64000,
-        strengths: ['Very cheap', 'Good for simple tasks'],
-        bestFor: 'Budget extractions, simple key-values'
+        id: 'claude-3-5-haiku-latest', 
+        name: 'Claude 3.5 Haiku', 
+        inputCost: 0.80, 
+        outputCost: 4.00,
+        contextWindow: 200000,
+        strengths: ['Fast', 'Great reasoning', 'Long context'],
+        bestFor: 'Quick extractions, balanced performance'
       },
       { 
-        id: 'deepseek-coder', 
-        name: 'DeepSeek Coder', 
-        inputCost: 0.14, 
-        outputCost: 0.28,
-        contextWindow: 64000,
-        strengths: ['Code understanding', 'Structured output'],
-        bestFor: 'Technical documents, structured data'
+        id: 'claude-sonnet-4-20250514', 
+        name: 'Claude Sonnet 4', 
+        inputCost: 3.00, 
+        outputCost: 15.00,
+        contextWindow: 200000,
+        strengths: ['Best accuracy', 'Complex documents', 'Superior reasoning'],
+        bestFor: 'High-stakes extractions, complex layouts'
       },
     ]
   },

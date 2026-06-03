@@ -10,9 +10,9 @@ export const MODEL_PRICING: Record<string, { input: number; output: number }> = 
   // Gemini
   'gemini-1.5-flash': { input: 0.075, output: 0.30 },
   'gemini-1.5-pro': { input: 1.25, output: 5.00 },
-  // DeepSeek
-  'deepseek-chat': { input: 0.14, output: 0.28 },
-  'deepseek-coder': { input: 0.14, output: 0.28 },
+  // Anthropic
+  'claude-3-5-haiku-latest': { input: 0.80, output: 4.00 },
+  'claude-sonnet-4-20250514': { input: 3.00, output: 15.00 },
 }
 
 // Markup percentage
@@ -25,8 +25,8 @@ function getGatewayModel(provider: ModelProvider, model: string): string {
       return `openai/${model}`
     case 'GEMINI':
       return `google/${model}`
-    case 'DEEPSEEK':
-      return `deepseek/${model}`
+    case 'ANTHROPIC':
+      return `anthropic/${model}`
     case 'CUSTOM':
       // Custom models are handled separately
       return model
