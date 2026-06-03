@@ -117,10 +117,6 @@ export default function SettingsPage() {
       if (logsResult.data) setUsageLogs(logsResult.data)
       if (apisResult.data) setSavedAPIs(apisResult.data)
       if (transactionsResult.data) setWalletTransactions(transactionsResult.data)
-
-      if (transactions) {
-        setWalletTransactions(transactions)
-      }
     } catch (err) {
       console.error('Error loading data:', err)
       setError('Failed to load data')

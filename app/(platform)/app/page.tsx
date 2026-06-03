@@ -124,8 +124,6 @@ function OCREngineContent() {
   const [team, setTeam] = useState<Team | null>(null)
   const [authLoading, setAuthLoading] = useState(true)
 
-  const router = useRouter()
-
   // Check auth and load user data
 useEffect(() => {
   // Check for email verification success
@@ -166,7 +164,7 @@ useEffect(() => {
               .select('*')
               .eq('id', profileResult.data.team_id)
               .single()
-              .then(({ data: teamData }) => {
+              .then(({ data: teamData }: { data: Team | null }) => {
                 if (teamData) setTeam(teamData)
               })
           }
@@ -196,7 +194,7 @@ useEffect(() => {
 
     checkAuth()
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, session: { user: unknown } | null) => {
       if (!session) {
         router.push('/auth/login')
       }

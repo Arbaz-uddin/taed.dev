@@ -297,8 +297,8 @@ export function ModelSelector({
                   <Building2 className="h-4 w-4 text-amber-400" />
                 ) : provider === 'GEMINI' ? (
                   <Sparkles className="h-4 w-4 text-blue-400" />
-                ) : provider === 'DEEPSEEK' ? (
-                  <Zap className="h-4 w-4 text-green-400" />
+                ) : provider === 'ANTHROPIC' ? (
+                  <Zap className="h-4 w-4 text-orange-400" />
                 ) : (
                   <FileText className="h-4 w-4 text-emerald-400" />
                 )}
