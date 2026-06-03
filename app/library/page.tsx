@@ -55,7 +55,7 @@ export default function APILibraryPage() {
         }
 
         if (userAPIsResult.data) {
-          const clonedIds = new Set(userAPIsResult.data.map(api => api.cloned_from).filter(Boolean) as string[])
+          const clonedIds = new Set(userAPIsResult.data.map((api: SavedAPI) => api.cloned_from).filter(Boolean) as string[])
           setAddedAPIs(clonedIds)
         }
       }

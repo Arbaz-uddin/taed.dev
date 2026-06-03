@@ -37,8 +37,8 @@ export default function HomePage() {
     
     // Non-blocking auth check
     const supabase = createClient()
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user)
+    supabase.auth.getUser().then(({ data: { user: authUser } }: { data: { user: unknown } }) => {
+      setUser(authUser)
     })
   }, [])
 

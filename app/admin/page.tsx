@@ -174,7 +174,7 @@ export default function AdminPage() {
       if (teamsData) {
         // Get member counts for each team
         const teamsWithCounts = await Promise.all(
-          teamsData.map(async (team) => {
+          teamsData.map(async (team: Team) => {
             const { count: memberCount } = await supabase
               .from('profiles')
               .select('*', { count: 'exact', head: true })
@@ -224,10 +224,10 @@ export default function AdminPage() {
         })))
 
         // Calculate stats
-        const successful = logsData.filter(l => l.success).length
-        const failed = logsData.filter(l => !l.success).length
+        const successful = logsData.filter((l: APIUsageLog) => l.success).length
+        const failed = logsData.filter((l: APIUsageLog) => !l.success).length
         const avgTime = logsData.length > 0
-          ? logsData.reduce((sum, l) => sum + (l.processing_time_ms || 0), 0) / logsData.length
+          ? logsData.reduce((sum: number, l: APIUsageLog) => sum + (l.processing_time_ms || 0), 0) / logsData.length
           : 0
 
         setStats({
@@ -247,7 +247,7 @@ export default function AdminPage() {
 
       if (libraryData) {
         // Get usage counts and total costs for each library API
-        const libraryWithStats = await Promise.all(libraryData.map(async (api) => {
+        const libraryWithStats = await Promise.all(libraryData.map(async (api: SavedAPI) => {
           // Count clones
           const { count: cloneCount } = await supabase
             .from('saved_apis')
@@ -260,7 +260,7 @@ export default function AdminPage() {
             .select('cost')
             .eq('api_id', api.id)
 
-          const totalCost = costData?.reduce((sum, log) => sum + (Number(log.cost) || 0), 0) || 0
+          const totalCost = costData?.reduce((sum: number, log: { cost: number | null }) => sum + (Number(log.cost) || 0), 0) || 0
 
           return {
             ...api,

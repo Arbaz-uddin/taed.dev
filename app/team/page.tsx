@@ -105,7 +105,7 @@ export default function TeamPage() {
               .eq('team_id', profileData.team_id)
 
             if (members) {
-              setTeamMembers(members.map(m => ({
+              setTeamMembers(members.map((m: Profile) => ({
                 ...m,
                 isCreator: m.id === teamData.created_by
               })))
@@ -131,7 +131,7 @@ export default function TeamPage() {
             .eq('status', 'pending')
 
           if (received) {
-            setReceivedInvitations(received.map(inv => ({
+            setReceivedInvitations(received.map((inv: TeamInvitation & { teams: Team }) => ({
               ...inv,
               team: inv.teams as Team
             })))

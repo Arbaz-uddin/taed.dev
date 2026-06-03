@@ -29,7 +29,7 @@ export default function SignUpSuccessPage() {
     checkAuth()
 
     // Listen for auth state changes (when user verifies email in another tab)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string, session: { user?: { email_confirmed_at?: string } } | null) => {
       if (event === 'SIGNED_IN' && session?.user?.email_confirmed_at) {
         setIsAuthenticated(true)
       }
