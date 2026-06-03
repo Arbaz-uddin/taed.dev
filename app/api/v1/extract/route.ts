@@ -137,8 +137,8 @@ Important instructions:
     const processingTime = Date.now() - startTime
 
     // Calculate actual cost based on token usage
-    const inputTokens = result.usage?.promptTokens || 0
-    const outputTokens = result.usage?.completionTokens || 0
+    const inputTokens = result.usage?.inputTokens || 0
+    const outputTokens = result.usage?.outputTokens || 0
     
     const inputCost = (inputTokens / 1_000_000) * INPUT_COST_PER_1M
     const outputCost = (outputTokens / 1_000_000) * OUTPUT_COST_PER_1M

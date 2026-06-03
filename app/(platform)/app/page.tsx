@@ -454,6 +454,7 @@ useEffect(() => {
     const validFields = fields.filter((f) => f.name.trim() && f.description.trim())
     
     try {
+      const supabase = createClient()
       const { data: newAPI, error: insertError } = await supabase
         .from('saved_apis')
         .insert({
@@ -507,6 +508,7 @@ useEffect(() => {
     }
 
     try {
+      const supabase = createClient()
       const { error: deleteError } = await supabase
         .from('saved_apis')
         .delete()

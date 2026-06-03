@@ -135,8 +135,8 @@ async function executeStandardExtraction(
     ],
   })
 
-  const promptTokens = result.usage?.promptTokens || 0
-  const completionTokens = result.usage?.completionTokens || 0
+  const promptTokens = result.usage?.inputTokens || 0
+  const completionTokens = result.usage?.outputTokens || 0
   const cost = calculateCost(config.model, promptTokens, completionTokens)
 
   return {
