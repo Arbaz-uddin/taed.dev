@@ -38,6 +38,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Switch } from '@/components/ui/switch'
 import { ModelSelector } from '@/components/model-selector'
 import { API_ERROR_CODES_SHORT } from '@/lib/api-error-codes'
+import { useIdleTimeout } from '@/hooks/use-idle-timeout'
 import type { Profile, SavedAPI, Team, ModelConfig } from '@/lib/types/database'
 
 interface ExtractionField {
@@ -76,6 +77,11 @@ interface LocalSavedAPI {
 
 function OCREngineContent() {
   const searchParams = useSearchParams()
+  const router = useRouter()
+  
+  // Enable idle timeout - logs out user after 10 minutes of inactivity
+  useIdleTimeout()
+  
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [emailVerified, setEmailVerified] = useState(false)

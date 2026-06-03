@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/dialog'
 import { ArrowLeft, Settings, CreditCard, User, Loader2, Plus, Trash2, Check, Star, Key, Eye, EyeOff, RefreshCw, Copy, BarChart3, Wallet, ArrowDownLeft, ArrowUpRight } from 'lucide-react'
 import type { Profile, PaymentMethod } from '@/lib/types/database'
+import { useIdleTimeout } from '@/hooks/use-idle-timeout'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 
 interface UsageLog {
@@ -47,6 +48,9 @@ interface WalletTransaction {
 }
 
 export default function SettingsPage() {
+  // Enable idle timeout - logs out user after 10 minutes of inactivity
+  useIdleTimeout()
+  
   const [user, setUser] = useState<{ id: string; email: string } | null>(null)
   const [profile, setProfile] = useState<(Profile & { api_key?: string | null }) | null>(null)
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([])

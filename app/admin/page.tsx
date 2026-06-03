@@ -41,6 +41,7 @@ import {
 } from 'lucide-react'
 import type { Profile, Team, SavedAPI, APIUsageLog, APICategory } from '@/lib/types/database'
 import { Textarea } from '@/components/ui/textarea'
+import { useIdleTimeout } from '@/hooks/use-idle-timeout'
 
 interface UsageStats {
   totalExtractions: number
@@ -55,6 +56,9 @@ interface TeamWithMembers extends Team {
 }
 
 export default function AdminPage() {
+  // Enable idle timeout - logs out user after 10 minutes of inactivity
+  useIdleTimeout()
+  
   const [user, setUser] = useState<{ id: string; email: string } | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   

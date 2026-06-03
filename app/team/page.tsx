@@ -28,12 +28,16 @@ import {
 } from '@/components/ui/table'
 import { ArrowLeft, Users, UserPlus, Mail, Check, X, Loader2, Crown, FileText, Clock, Trash2 } from 'lucide-react'
 import type { Profile, Team, TeamInvitation } from '@/lib/types/database'
+import { useIdleTimeout } from '@/hooks/use-idle-timeout'
 
 interface TeamMember extends Profile {
   isCreator: boolean
 }
 
 export default function TeamPage() {
+  // Enable idle timeout - logs out user after 10 minutes of inactivity
+  useIdleTimeout()
+  
   const [user, setUser] = useState<{ id: string; email: string } | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [team, setTeam] = useState<Team | null>(null)

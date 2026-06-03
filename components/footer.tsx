@@ -101,7 +101,7 @@ export function Footer() {
               &copy; {new Date().getFullYear()} TAED. {t.footer.copyright}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              Taed.dev is a property of Metavolv Technologies LLC, UAE
+              Taed.dev is a property of Metavolv Technologies LLC, UAE. Proudly Made in UAE 🇦🇪
             </p>
           </div>
           <p className="text-xs sm:text-sm text-muted-foreground">
