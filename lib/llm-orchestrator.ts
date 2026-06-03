@@ -2,6 +2,45 @@ import { generateText, Output } from 'ai'
 import { z } from 'zod'
 import type { ModelProvider } from '@/lib/types/database'
 
+// Error codes for extraction pipeline
+export const ERROR_CODES = {
+  EXTRACTION_PIPELINE_FAILURE: {
+    code: 'EXTRACTION_PIPELINE_FAILURE',
+    status: 500,
+    message: 'The extraction pipeline encountered an unexpected error. Please try again or contact support.',
+  },
+  MODEL_COMPLIANCE_REFUSAL: {
+    code: 'MODEL_COMPLIANCE_REFUSAL',
+    status: 403,
+    message: 'The AI model refused to process this content due to safety/compliance policies.',
+  },
+  SCHEMA_MISMATCH_EMPTY_OUTPUT: {
+    code: 'SCHEMA_MISMATCH_EMPTY_OUTPUT',
+    status: 422,
+    message: 'The extraction returned empty or invalid data. The document may not contain the requested fields.',
+  },
+  UNREADABLE_IMAGE_CONTENT: {
+    code: 'UNREADABLE_IMAGE_CONTENT',
+    status: 422,
+    message: 'The image/document could not be read. Please ensure the file is clear, properly oriented, and not corrupted.',
+  },
+} as const
+
+export type ErrorCode = keyof typeof ERROR_CODES
+
+export class ExtractionError extends Error {
+  code: ErrorCode
+  status: number
+
+  constructor(code: ErrorCode, customMessage?: string) {
+    const errorDef = ERROR_CODES[code]
+    super(customMessage || errorDef.message)
+    this.code = code
+    this.status = errorDef.status
+    this.name = 'ExtractionError'
+  }
+}
+
 // Model pricing per 1M tokens
 export const MODEL_PRICING: Record<string, { input: number; output: number }> = {
   // OpenAI
@@ -115,34 +154,84 @@ async function executeStandardExtraction(
   const extractionSchema = buildExtractionSchema(input.fields)
   const prompt = buildExtractionPrompt(input.fields)
 
-  const result = await generateText({
-    model: gatewayModel,
-    output: Output.object({ schema: extractionSchema }),
-    messages: [
-      {
-        role: 'user',
-        content: [
-          {
-            type: 'image',
-            image: `data:${input.mimeType};base64,${input.base64Image}`,
-          },
-          {
-            type: 'text',
-            text: prompt,
-          },
-        ],
-      },
-    ],
-  })
+  try {
+    const result = await generateText({
+      model: gatewayModel,
+      output: Output.object({ schema: extractionSchema }),
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              image: `data:${input.mimeType};base64,${input.base64Image}`,
+            },
+            {
+              type: 'text',
+              text: prompt,
+            },
+          ],
+        },
+      ],
+    })
 
-  const promptTokens = result.usage?.inputTokens || 0
-  const completionTokens = result.usage?.outputTokens || 0
-  const cost = calculateCost(config.model, promptTokens, completionTokens)
+    const promptTokens = result.usage?.inputTokens || 0
+    const completionTokens = result.usage?.outputTokens || 0
+    const cost = calculateCost(config.model, promptTokens, completionTokens)
 
-  return {
-    data: result.output as Record<string, string | null>,
-    usage: { promptTokens, completionTokens },
-    cost,
+    const outputData = result.output as Record<string, string | null>
+    
+    // Check for empty or all-null output (schema mismatch)
+    if (!outputData || Object.keys(outputData).length === 0) {
+      throw new ExtractionError('SCHEMA_MISMATCH_EMPTY_OUTPUT')
+    }
+    
+    const allNull = Object.values(outputData).every(v => v === null)
+    if (allNull) {
+      throw new ExtractionError('SCHEMA_MISMATCH_EMPTY_OUTPUT', 
+        'No data could be extracted from the document. The requested fields may not be present.')
+    }
+
+    return {
+      data: outputData,
+      usage: { promptTokens, completionTokens },
+      cost,
+    }
+  } catch (error) {
+    // Re-throw ExtractionErrors as-is
+    if (error instanceof ExtractionError) {
+      throw error
+    }
+
+    const errorMessage = error instanceof Error ? error.message.toLowerCase() : ''
+    
+    // Check for model compliance/safety refusal
+    if (
+      errorMessage.includes('safety') ||
+      errorMessage.includes('refused') ||
+      errorMessage.includes('policy') ||
+      errorMessage.includes('content policy') ||
+      errorMessage.includes('harmful') ||
+      errorMessage.includes('inappropriate')
+    ) {
+      throw new ExtractionError('MODEL_COMPLIANCE_REFUSAL')
+    }
+    
+    // Check for unreadable image content
+    if (
+      errorMessage.includes('image') ||
+      errorMessage.includes('unreadable') ||
+      errorMessage.includes('corrupt') ||
+      errorMessage.includes('invalid file') ||
+      errorMessage.includes('cannot process') ||
+      errorMessage.includes('unable to read')
+    ) {
+      throw new ExtractionError('UNREADABLE_IMAGE_CONTENT')
+    }
+    
+    // Generic pipeline failure
+    throw new ExtractionError('EXTRACTION_PIPELINE_FAILURE', 
+      error instanceof Error ? error.message : 'Unknown extraction error')
   }
 }
 
@@ -152,11 +241,13 @@ async function executeCustomExtraction(
   input: ExtractionInput
 ): Promise<ExtractionOutput> {
   if (!config.customEndpointUrl) {
-    throw new Error('Custom endpoint URL is required for enterprise models')
+    throw new ExtractionError('EXTRACTION_PIPELINE_FAILURE', 
+      'Custom endpoint URL is required for enterprise models')
   }
 
   if (!config.customApiKey) {
-    throw new Error('Custom API key is required for enterprise models')
+    throw new ExtractionError('EXTRACTION_PIPELINE_FAILURE', 
+      'Custom API key is required for enterprise models')
   }
 
   const prompt = buildExtractionPrompt(input.fields)
@@ -185,46 +276,64 @@ async function executeCustomExtraction(
     max_tokens: 4096,
   }
 
-  const response = await fetch(config.customEndpointUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${config.customApiKey}`,
-    },
-    body: JSON.stringify(requestBody),
-  })
-
-  if (!response.ok) {
-    const errorText = await response.text()
-    throw new Error(`Custom endpoint error: ${response.status} - ${errorText}`)
-  }
-
-  const result = await response.json()
-  
-  // Parse the response (OpenAI-compatible format)
-  const content = result.choices?.[0]?.message?.content || '{}'
-  let parsedData: Record<string, string | null>
-  
   try {
-    parsedData = JSON.parse(content)
-  } catch {
-    // If parsing fails, try to extract fields from the text
-    parsedData = {}
-    for (const field of input.fields) {
-      parsedData[field.name] = null
+    const response = await fetch(config.customEndpointUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${config.customApiKey}`,
+      },
+      body: JSON.stringify(requestBody),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      
+      // Check for compliance refusal (403)
+      if (response.status === 403) {
+        throw new ExtractionError('MODEL_COMPLIANCE_REFUSAL')
+      }
+      
+      throw new ExtractionError('EXTRACTION_PIPELINE_FAILURE', 
+        `Custom endpoint error: ${response.status} - ${errorText}`)
     }
-  }
 
-  const promptTokens = result.usage?.prompt_tokens || 0
-  const completionTokens = result.usage?.completion_tokens || 0
-  
-  // For custom models, we don't have pricing info, so use a default
-  const cost = calculateCost('gpt-4o-mini', promptTokens, completionTokens)
+    const result = await response.json()
+    
+    // Parse the response (OpenAI-compatible format)
+    const content = result.choices?.[0]?.message?.content || '{}'
+    let parsedData: Record<string, string | null>
+    
+    try {
+      parsedData = JSON.parse(content)
+    } catch {
+      throw new ExtractionError('SCHEMA_MISMATCH_EMPTY_OUTPUT', 
+        'Failed to parse extraction response as JSON')
+    }
 
-  return {
-    data: parsedData,
-    usage: { promptTokens, completionTokens },
-    cost,
+    // Check for empty output
+    if (!parsedData || Object.keys(parsedData).length === 0) {
+      throw new ExtractionError('SCHEMA_MISMATCH_EMPTY_OUTPUT')
+    }
+
+    const promptTokens = result.usage?.prompt_tokens || 0
+    const completionTokens = result.usage?.completion_tokens || 0
+    
+    // For custom models, we don't have pricing info, so use a default
+    const cost = calculateCost('gpt-4o-mini', promptTokens, completionTokens)
+
+    return {
+      data: parsedData,
+      usage: { promptTokens, completionTokens },
+      cost,
+    }
+  } catch (error) {
+    if (error instanceof ExtractionError) {
+      throw error
+    }
+    
+    throw new ExtractionError('EXTRACTION_PIPELINE_FAILURE', 
+      error instanceof Error ? error.message : 'Custom endpoint extraction failed')
   }
 }
 

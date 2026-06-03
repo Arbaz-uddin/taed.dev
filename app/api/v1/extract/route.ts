@@ -1,19 +1,14 @@
 'use server'
 
 import { createClient } from '@supabase/supabase-js'
-import { generateText, Output } from 'ai'
-import { z } from 'zod'
+import { executeExtraction, ExtractionError, ERROR_CODES } from '@/lib/llm-orchestrator'
+import type { ModelProvider } from '@/lib/types/database'
 
 // Create admin client for API key validation (bypasses RLS)
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
-
-// Gemini 2.0 Flash pricing per 1M tokens
-const INPUT_COST_PER_1M = 0.075
-const OUTPUT_COST_PER_1M = 0.30
-const MARKUP = 1.30 // 30% markup
 
 export async function POST(request: Request) {
   const startTime = Date.now()
@@ -92,66 +87,37 @@ export async function POST(request: Request) {
     const base64 = buffer.toString('base64')
     const mimeType = file.type || 'application/octet-stream'
 
-    // Build dynamic schema from fields
-    const schemaShape: Record<string, z.ZodNullable<z.ZodString>> = {}
-    fields.forEach((field) => {
-      schemaShape[field.name] = z.string().nullable()
-    })
-    const dynamicSchema = z.object(schemaShape)
+    // Get model configuration from saved API (with defaults)
+    const provider = (savedApi.selected_provider as ModelProvider) || 'OPENAI'
+    const model = savedApi.selected_model || 'gpt-4o-mini'
+    const isCustom = savedApi.is_custom_model || false
 
-    // Build extraction prompt
-    const fieldDescriptions = fields
-      .map((f) => `- ${f.name}: ${f.description}`)
-      .join('\n')
+    // Execute extraction using orchestrator
+    const result = await executeExtraction(
+      {
+        provider,
+        model,
+        isCustom,
+        customEndpointUrl: savedApi.custom_endpoint_url,
+        customApiKey: null, // Would need to fetch from vault for custom models
+      },
+      {
+        base64Image: base64,
+        mimeType,
+        fields,
+      }
+    )
 
-    const prompt = `You are an expert document data extractor. Analyze the provided document image and extract the following information:
-
-${fieldDescriptions}
-
-Important instructions:
-1. Extract ONLY the exact values found in the document
-2. If a field cannot be found, return null for that field
-3. Be precise and accurate with the extracted data
-4. For dates, maintain the format as shown in the document
-5. For numbers, include currency symbols if present`
-
-    // Call Gemini API
-    const result = await generateText({
-      model: 'google/gemini-2.0-flash-001',
-      messages: [
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: prompt },
-            {
-              type: 'image',
-              image: `data:${mimeType};base64,${base64}`,
-            },
-          ],
-        },
-      ],
-      output: Output.object({ schema: dynamicSchema }),
-    })
-
-    const extractedData = result.output
     const processingTime = Date.now() - startTime
 
-    // Calculate actual cost based on token usage
-    const inputTokens = result.usage?.inputTokens || 0
-    const outputTokens = result.usage?.outputTokens || 0
-    
-    const inputCost = (inputTokens / 1_000_000) * INPUT_COST_PER_1M
-    const outputCost = (outputTokens / 1_000_000) * OUTPUT_COST_PER_1M
-    const totalCost = (inputCost + outputCost) * MARKUP
-    const finalCost = Math.max(totalCost, 0.0001) // Minimum cost
-
     // Check if user has enough balance for the actual cost
-    const newBalance = Number(profile.wallet_balance) - finalCost
+    const newBalance = Number(profile.wallet_balance) - result.cost
     
     if (newBalance < 0) {
       return Response.json({ 
         error: 'Insufficient wallet balance for this extraction.',
-        cost: finalCost.toFixed(6),
+        error_code: 'INSUFFICIENT_BALANCE',
+        cost: result.cost.toFixed(6),
         wallet_balance: profile.wallet_balance,
         action_required: 'add_funds',
         contact_url: '/contact'
@@ -168,7 +134,7 @@ Important instructions:
       console.error('Wallet update error:', walletError)
     }
 
-    // Log usage with cost
+    // Log usage with cost and model info
     const { data: usageLog } = await supabaseAdmin.from('api_usage_logs').insert({
       user_id: profile.id,
       api_id: apiId,
@@ -178,36 +144,58 @@ Important instructions:
       success: true,
       processing_time_ms: processingTime,
       api_key_used: apiKey,
-      cost: finalCost,
+      cost: result.cost,
+      model_provider: provider,
+      model_name: model,
     }).select().single()
 
     // Record transaction
     await supabaseAdmin.from('wallet_transactions').insert({
       user_id: profile.id,
-      amount: -finalCost,
+      amount: -result.cost,
       type: 'debit',
-      description: `API extraction: ${savedApi.name}`,
+      description: `API extraction via ${provider}/${model}: ${savedApi.name}`,
       api_log_id: usageLog?.id,
       balance_after: newBalance,
     })
 
     return Response.json({
       success: true,
-      data: extractedData,
+      data: result.data,
       fields: fields.map((f) => f.name),
       api_name: savedApi.name,
       processing_time_ms: processingTime,
-      cost: finalCost.toFixed(6),
+      cost: result.cost.toFixed(6),
       wallet_balance: newBalance.toFixed(4),
+      model: {
+        provider,
+        model,
+      },
+      usage: result.usage,
     })
 
   } catch (error) {
     const processingTime = Date.now() - startTime
+    
+    // Handle ExtractionError with proper error codes
+    if (error instanceof ExtractionError) {
+      return Response.json({ 
+        success: false,
+        error: error.message,
+        error_code: error.code,
+        error_details: ERROR_CODES[error.code],
+        processing_time_ms: processingTime,
+      }, { status: error.status })
+    }
+    
+    // Fallback to generic pipeline failure
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     
     return Response.json({ 
       success: false,
       error: errorMessage,
+      error_code: 'EXTRACTION_PIPELINE_FAILURE',
+      error_details: ERROR_CODES.EXTRACTION_PIPELINE_FAILURE,
       processing_time_ms: processingTime,
     }, { status: 500 })
   }

@@ -16,6 +16,7 @@ import {
   ArrowRight, Lock, LogIn
 } from 'lucide-react'
 import type { Profile, SavedAPI, APICategory } from '@/lib/types/database'
+import { API_ERROR_CODES_SHORT } from '@/lib/api-error-codes'
 
 export default function APILibraryPage() {
   const router = useRouter()
@@ -96,7 +97,11 @@ export default function APILibraryPage() {
 
     try {
       const supabase = createClient()
-      // Clone the API
+      // Clone the API with error codes in description
+      const clonedDescription = libraryAPI.description 
+        ? `${libraryAPI.description} ${API_ERROR_CODES_SHORT}`
+        : `Cloned from library: ${libraryAPI.name}. ${API_ERROR_CODES_SHORT}`
+      
       const { data: clonedAPI, error } = await supabase
         .from('saved_apis')
         .insert({
@@ -105,7 +110,7 @@ export default function APILibraryPage() {
           name: libraryAPI.name,
           fields: libraryAPI.fields,
           is_library: false,
-          description: libraryAPI.description,
+          description: clonedDescription,
           category: libraryAPI.category,
           cloned_from: libraryAPI.id,
         })

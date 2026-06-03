@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
-import { executeExtraction } from '@/lib/llm-orchestrator'
+import { executeExtraction, ExtractionError, ERROR_CODES } from '@/lib/llm-orchestrator'
 import type { ModelProvider } from '@/lib/types/database'
 
 // Create admin client for wallet operations
@@ -163,8 +163,28 @@ export async function POST(req: Request) {
     })
   } catch (error) {
     console.error('Extraction error:', error)
+    
+    // Handle ExtractionError with proper error codes
+    if (error instanceof ExtractionError) {
+      return Response.json(
+        { 
+          success: false,
+          error: error.message,
+          error_code: error.code,
+          error_details: ERROR_CODES[error.code],
+        },
+        { status: error.status }
+      )
+    }
+    
+    // Fallback to generic pipeline failure
     return Response.json(
-      { error: error instanceof Error ? error.message : 'Failed to extract data' },
+      { 
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to extract data',
+        error_code: 'EXTRACTION_PIPELINE_FAILURE',
+        error_details: ERROR_CODES.EXTRACTION_PIPELINE_FAILURE,
+      },
       { status: 500 }
     )
   }

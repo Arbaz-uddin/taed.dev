@@ -37,6 +37,7 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Switch } from '@/components/ui/switch'
 import { ModelSelector } from '@/components/model-selector'
+import { API_ERROR_CODES_SHORT } from '@/lib/api-error-codes'
 import type { Profile, SavedAPI, Team, ModelConfig } from '@/lib/types/database'
 
 interface ExtractionField {
@@ -433,6 +434,9 @@ useEffect(() => {
     
     const validFields = fields.filter((f) => f.name.trim() && f.description.trim())
     
+    // Auto-generate description with error codes
+    const autoDescription = `Extraction API for ${apiName.trim()}. Fields: ${validFields.map(f => f.name).join(', ')}. ${API_ERROR_CODES_SHORT}`
+    
     try {
       const supabase = createClient()
       const { data: newAPI, error: insertError } = await supabase
@@ -442,6 +446,7 @@ useEffect(() => {
           team_id: profile?.team_id || null,
           name: apiName.trim(),
           fields: validFields.map((f) => ({ name: f.name, description: f.description })),
+          description: autoDescription,
         })
         .select()
         .single()
@@ -454,6 +459,7 @@ useEffect(() => {
         id: newAPI.id,
         name: newAPI.name,
         fields: newAPI.fields as { name: string; description: string }[],
+        description: newAPI.description,
         createdAt: newAPI.created_at,
         userId: newAPI.user_id,
         teamId: newAPI.team_id,
