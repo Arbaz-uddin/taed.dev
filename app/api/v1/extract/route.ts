@@ -1,0 +1,214 @@
+'use server'
+
+import { createClient } from '@supabase/supabase-js'
+import { generateText, Output } from 'ai'
+import { z } from 'zod'
+
+// Create admin client for API key validation (bypasses RLS)
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
+
+// Gemini 2.0 Flash pricing per 1M tokens
+const INPUT_COST_PER_1M = 0.075
+const OUTPUT_COST_PER_1M = 0.30
+const MARKUP = 1.30 // 30% markup
+
+export async function POST(request: Request) {
+  const startTime = Date.now()
+  
+  try {
+    // Get API key from header
+    const apiKey = request.headers.get('X-API-Key') || request.headers.get('Authorization')?.replace('Bearer ', '')
+    
+    if (!apiKey) {
+      return Response.json({ error: 'Missing API key. Provide X-API-Key header or Authorization: Bearer <key>' }, { status: 401 })
+    }
+
+    // Validate API key and get user with wallet balance
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('id, team_id, wallet_balance')
+      .eq('api_key', apiKey)
+      .single()
+
+    if (profileError || !profile) {
+      return Response.json({ error: 'Invalid API key' }, { status: 401 })
+    }
+
+    // Check wallet balance
+    if (Number(profile.wallet_balance) <= 0) {
+      return Response.json({ 
+        error: 'Insufficient wallet balance. Please add funds to your wallet or contact sales.',
+        wallet_balance: profile.wallet_balance,
+        action_required: 'add_funds',
+        contact_url: '/contact'
+      }, { status: 402 })
+    }
+
+    // Parse form data
+    const formData = await request.formData()
+    const file = formData.get('file') as File
+    const apiId = formData.get('api_id') as string
+
+    if (!file) {
+      return Response.json({ error: 'No file provided' }, { status: 400 })
+    }
+
+    if (!apiId) {
+      return Response.json({ error: 'No api_id provided' }, { status: 400 })
+    }
+
+    // Get saved API configuration
+    const { data: savedApi, error: apiError } = await supabaseAdmin
+      .from('saved_apis')
+      .select('*')
+      .eq('id', apiId)
+      .single()
+
+    if (apiError || !savedApi) {
+      return Response.json({ error: 'Invalid API ID or API not found' }, { status: 404 })
+    }
+
+    // Check if user has access to this API (own API or team API)
+    const hasAccess = savedApi.user_id === profile.id || 
+                      (savedApi.team_id && savedApi.team_id === profile.team_id)
+    
+    if (!hasAccess) {
+      return Response.json({ error: 'Access denied to this API' }, { status: 403 })
+    }
+
+    // Get fields from saved API
+    const fields = savedApi.fields as { name: string; description: string }[]
+    
+    if (!fields || fields.length === 0) {
+      return Response.json({ error: 'API has no extraction fields configured' }, { status: 400 })
+    }
+
+    // Convert file to base64
+    const bytes = await file.arrayBuffer()
+    const buffer = Buffer.from(bytes)
+    const base64 = buffer.toString('base64')
+    const mimeType = file.type || 'application/octet-stream'
+
+    // Build dynamic schema from fields
+    const schemaShape: Record<string, z.ZodNullable<z.ZodString>> = {}
+    fields.forEach((field) => {
+      schemaShape[field.name] = z.string().nullable()
+    })
+    const dynamicSchema = z.object(schemaShape)
+
+    // Build extraction prompt
+    const fieldDescriptions = fields
+      .map((f) => `- ${f.name}: ${f.description}`)
+      .join('\n')
+
+    const prompt = `You are an expert document data extractor. Analyze the provided document image and extract the following information:
+
+${fieldDescriptions}
+
+Important instructions:
+1. Extract ONLY the exact values found in the document
+2. If a field cannot be found, return null for that field
+3. Be precise and accurate with the extracted data
+4. For dates, maintain the format as shown in the document
+5. For numbers, include currency symbols if present`
+
+    // Call Gemini API
+    const result = await generateText({
+      model: 'google/gemini-2.0-flash-001',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: prompt },
+            {
+              type: 'image',
+              image: `data:${mimeType};base64,${base64}`,
+            },
+          ],
+        },
+      ],
+      output: Output.object({ schema: dynamicSchema }),
+    })
+
+    const extractedData = result.output
+    const processingTime = Date.now() - startTime
+
+    // Calculate actual cost based on token usage
+    const inputTokens = result.usage?.promptTokens || 0
+    const outputTokens = result.usage?.completionTokens || 0
+    
+    const inputCost = (inputTokens / 1_000_000) * INPUT_COST_PER_1M
+    const outputCost = (outputTokens / 1_000_000) * OUTPUT_COST_PER_1M
+    const totalCost = (inputCost + outputCost) * MARKUP
+    const finalCost = Math.max(totalCost, 0.0001) // Minimum cost
+
+    // Check if user has enough balance for the actual cost
+    const newBalance = Number(profile.wallet_balance) - finalCost
+    
+    if (newBalance < 0) {
+      return Response.json({ 
+        error: 'Insufficient wallet balance for this extraction.',
+        cost: finalCost.toFixed(6),
+        wallet_balance: profile.wallet_balance,
+        action_required: 'add_funds',
+        contact_url: '/contact'
+      }, { status: 402 })
+    }
+
+    // Deduct from wallet
+    const { error: walletError } = await supabaseAdmin
+      .from('profiles')
+      .update({ wallet_balance: newBalance })
+      .eq('id', profile.id)
+
+    if (walletError) {
+      console.error('Wallet update error:', walletError)
+    }
+
+    // Log usage with cost
+    const { data: usageLog } = await supabaseAdmin.from('api_usage_logs').insert({
+      user_id: profile.id,
+      api_id: apiId,
+      team_id: profile.team_id,
+      file_name: file.name,
+      file_type: file.type,
+      success: true,
+      processing_time_ms: processingTime,
+      api_key_used: apiKey,
+      cost: finalCost,
+    }).select().single()
+
+    // Record transaction
+    await supabaseAdmin.from('wallet_transactions').insert({
+      user_id: profile.id,
+      amount: -finalCost,
+      type: 'debit',
+      description: `API extraction: ${savedApi.name}`,
+      api_log_id: usageLog?.id,
+      balance_after: newBalance,
+    })
+
+    return Response.json({
+      success: true,
+      data: extractedData,
+      fields: fields.map((f) => f.name),
+      api_name: savedApi.name,
+      processing_time_ms: processingTime,
+      cost: finalCost.toFixed(6),
+      wallet_balance: newBalance.toFixed(4),
+    })
+
+  } catch (error) {
+    const processingTime = Date.now() - startTime
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    
+    return Response.json({ 
+      success: false,
+      error: errorMessage,
+      processing_time_ms: processingTime,
+    }, { status: 500 })
+  }
+}

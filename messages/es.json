@@ -1,0 +1,181 @@
+{
+  "nav": {
+    "features": "Características",
+    "pricing": "Precios",
+    "contact": "Contacto",
+    "login": "Iniciar Sesión",
+    "getStarted": "Comenzar",
+    "dashboard": "Panel"
+  },
+  "hero": {
+    "badge": "Procesamiento Inteligente de Documentos",
+    "title": "Extraer Datos de Cualquier Documento,",
+    "titleHighlight": "Cualquier Idioma",
+    "description": "TAED es la capa de visión para aplicaciones modernas. Encadene lógica visual, defina esquemas JSON y despliegue motores de visión listos para producción en 60 segundos.",
+    "cta": "Comenzar Extracción",
+    "secondaryCta": "Ver Documentación",
+    "trustedBy": "Confianza de equipos de ingeniería en todo el mundo"
+  },
+  "stats": {
+    "languages": "Idiomas Soportados",
+    "accuracy": "Tasa de Precisión",
+    "documents": "Documentos Procesados",
+    "apiCalls": "Llamadas API / Mes"
+  },
+  "features": {
+    "title": "Diseñado para Equipos de Ingeniería",
+    "description": "Características potentes diseñadas para optimizar sus flujos de procesamiento de documentos",
+    "structuredOutput": {
+      "title": "Salida Estructurada",
+      "description": "Defina esquemas de extracción personalizados y reciba datos JSON limpios y estructurados listos para sus aplicaciones."
+    },
+    "multiLanguage": {
+      "title": "70+ Idiomas",
+      "description": "Soporte nativo para más de 70 idiomas incluyendo scripts complejos como árabe, chino, japonés y más."
+    },
+    "apiFirst": {
+      "title": "Diseño API-First",
+      "description": "APIs RESTful con SDKs para todos los principales lenguajes. Integre en minutos, no en días."
+    },
+    "batchProcessing": {
+      "title": "Procesamiento por Lotes",
+      "description": "Procese miles de documentos simultáneamente con nuestra infraestructura escalable."
+    },
+    "customModels": {
+      "title": "Modelos Personalizados",
+      "description": "Entrene modelos de extracción personalizados para sus tipos y formatos de documentos específicos."
+    },
+    "analytics": {
+      "title": "Analítica en Tiempo Real",
+      "description": "Monitoree el uso, rastree la precisión y optimice sus pipelines de procesamiento de documentos."
+    }
+  },
+  "languages": {
+    "title": "Soporte de Idiomas Global",
+    "description": "Soporte nativo para más de 70 idiomas con alta precisión"
+  },
+  "about": {
+    "title": "Cerrando Brechas de Documentos Globalmente",
+    "description": "TAED está diseñado para resolver los desafíos complejos de la inteligencia visual en diferentes idiomas, formatos e industrias. Nuestra plataforma impulsada por IA comprende el contexto, maneja datos visuales complejos y extrae JSON estructurado con precisión sin precedentes.",
+    "point1": "Seguridad y cumplimiento de nivel empresarial",
+    "point2": "Garantía SLA de disponibilidad del 99.9%",
+    "point3": "Soporte dedicado para equipos de ingeniería"
+  },
+  "cta": {
+    "title": "¿Listo para Transformar su Flujo de Documentos?",
+    "description": "Únase a miles de equipos de ingeniería que usan TAED para automatizar sus pipelines de inteligencia visual.",
+    "button": "Iniciar Prueba Gratuita",
+    "note": "No se requiere tarjeta de crédito"
+  },
+  "footer": {
+    "description": "Plataforma OCR inteligente para equipos de ingeniería. Extraer datos estructurados de documentos en más de 70 idiomas.",
+    "product": "Producto",
+    "company": "Empresa",
+    "legal": "Legal",
+    "features": "Características",
+    "pricing": "Precios",
+    "documentation": "Documentación",
+    "apiReference": "Referencia API",
+    "about": "Acerca de",
+    "blog": "Blog",
+    "careers": "Carreras",
+    "contact": "Contacto",
+    "privacy": "Política de Privacidad",
+    "terms": "Términos de Servicio",
+    "security": "Seguridad",
+    "copyright": "Todos los derechos reservados."
+  },
+  "contact": {
+    "title": "Contáctenos",
+    "description": "¿Tiene preguntas sobre TAED? Nos encantaría saber de usted. Envíenos un mensaje y responderemos lo antes posible.",
+    "form": {
+      "name": "Nombre Completo",
+      "namePlaceholder": "Juan García",
+      "email": "Correo Electrónico",
+      "emailPlaceholder": "juan@empresa.com",
+      "company": "Empresa",
+      "companyPlaceholder": "Su Empresa",
+      "subject": "Asunto",
+      "subjectPlaceholder": "¿Cómo podemos ayudar?",
+      "message": "Mensaje",
+      "messagePlaceholder": "Cuéntenos sobre sus necesidades de procesamiento de documentos...",
+      "submit": "Enviar Mensaje",
+      "sending": "Enviando..."
+    },
+    "info": {
+      "title": "Información de Contacto",
+      "description": "Contáctenos a través de cualquiera de estos canales",
+      "email": "Correo",
+      "response": "Tiempo de Respuesta",
+      "responseValue": "Dentro de 24 horas",
+      "support": "Soporte",
+      "supportValue": "24/7 para Empresas"
+    },
+    "faq": {
+      "title": "Preguntas Frecuentes",
+      "q1": "¿Qué formatos de archivo soportan?",
+      "a1": "Soportamos formatos PDF, PNG, JPG, TIFF, BMP y WebP. Los documentos pueden ser imágenes escaneadas o archivos digitales.",
+      "q2": "¿Qué tan preciso es el OCR?",
+      "a2": "Nuestro OCR alcanza más del 99.5% de precisión en documentos claros y más del 95% en escaneos difíciles, con mejoras continuas a través de IA.",
+      "q3": "¿Hay una API disponible?",
+      "a3": "¡Sí! Ofrecemos una API REST completa con SDKs para Python, JavaScript, Go y más. Consulte nuestra documentación para detalles."
+    }
+  },
+  "app": {
+    "myApis": "Mis APIs",
+    "createNewApi": "Crear Nueva API",
+    "noSavedApis": "Aún no hay APIs guardadas",
+    "noSavedApisDesc": "Extraiga datos de un documento y guarde su primera API",
+    "use": "Usar",
+    "curl": "CURL",
+    "fields": "campos",
+    "createdBy": "Creado por",
+    "uploadDocument": "Subir Documento",
+    "uploadDesc": "Arrastre y suelte o haga clic para subir",
+    "supportedFormats": "Soporta PDF, PNG, JPG hasta 10MB",
+    "extractionFields": "Campos de Extracción",
+    "extractionFieldsDesc": "Defina qué datos desea extraer",
+    "fieldName": "Nombre del Campo",
+    "fieldNamePlaceholder": "ej: numero_factura",
+    "description": "Descripción",
+    "descriptionPlaceholder": "ej: El número de factura o documento",
+    "addField": "Agregar Campo",
+    "extractData": "Extraer Datos",
+    "extracting": "Extrayendo...",
+    "results": "Resultados de Extracción",
+    "table": "Tabla",
+    "json": "JSON",
+    "lockAndSave": "Bloquear y Guardar API",
+    "field": "Campo",
+    "value": "Valor",
+    "apiLocked": "Configuración API Bloqueada",
+    "activeApi": "API Activa",
+    "unlock": "Desbloquear",
+    "getCurl": "Obtener CURL",
+    "nameYourApi": "Nombre su API",
+    "apiNameLabel": "Nombre de API",
+    "apiNamePlaceholder": "ej: Extractor de Facturas",
+    "cancel": "Cancelar",
+    "saveApi": "Guardar API",
+    "curlCommand": "Comando CURL",
+    "curlDesc": "Use este comando para extraer datos de documentos vía API",
+    "copyCurl": "Copiar CURL"
+  },
+  "auth": {
+    "welcomeBack": "Bienvenido de nuevo",
+    "signInTo": "Inicie sesión en su cuenta TAED",
+    "createAccount": "Crear una cuenta",
+    "getStartedWith": "Comience con TAED",
+    "email": "Correo",
+    "password": "Contraseña",
+    "fullName": "Nombre Completo",
+    "signIn": "Iniciar Sesión",
+    "signingIn": "Iniciando sesión...",
+    "signUp": "Registrarse",
+    "creatingAccount": "Creando cuenta...",
+    "noAccount": "¿No tiene una cuenta?",
+    "haveAccount": "¿Ya tiene una cuenta?",
+    "signUpLink": "Registrarse",
+    "signInLink": "Iniciar sesión"
+  }
+}

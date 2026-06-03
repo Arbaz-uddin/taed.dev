@@ -1,0 +1,181 @@
+{
+  "nav": {
+    "features": "Features",
+    "pricing": "Pricing",
+    "contact": "Contact",
+    "login": "Login",
+    "getStarted": "Get Started",
+    "dashboard": "Dashboard"
+  },
+  "hero": {
+    "badge": "The Vision Layer for Modern Apps",
+    "title": "Chain Visual Logic,",
+    "titleHighlight": "Ship Production Engines",
+    "description": "Stop writing fragile prompt wrappers, handling multi-modal latency, and parsing messy Markdown strings. Chain your visual logic, define your JSON schema, and deploy a production-grade vision engine in 60 seconds.",
+    "cta": "Create Free API Key",
+    "secondaryCta": "View Documentation",
+    "trustedBy": "Trusted by high-velocity engineering teams"
+  },
+  "stats": {
+    "languages": "Languages Supported",
+    "accuracy": "Accuracy Rate",
+    "documents": "Documents Processed",
+    "apiCalls": "API Calls / Month"
+  },
+  "features": {
+    "title": "Built for Engineering Teams",
+    "description": "Powerful features designed to streamline your document processing workflows",
+    "structuredOutput": {
+      "title": "Structured Output",
+      "description": "Define custom extraction schemas and receive clean, structured JSON data ready for your applications."
+    },
+    "multiLanguage": {
+      "title": "70+ Languages",
+      "description": "Native support for over 70 languages including complex scripts like Arabic, Chinese, Japanese, and more."
+    },
+    "apiFirst": {
+      "title": "API-First Design",
+      "description": "RESTful APIs with SDKs for all major languages. Integrate in minutes, not days."
+    },
+    "batchProcessing": {
+      "title": "Batch Processing",
+      "description": "Process thousands of documents simultaneously with our scalable infrastructure."
+    },
+    "customModels": {
+      "title": "Custom Models",
+      "description": "Train custom extraction models for your specific document types and formats."
+    },
+    "analytics": {
+      "title": "Real-time Analytics",
+      "description": "Monitor usage, track accuracy, and optimize your document processing pipelines."
+    }
+  },
+  "languages": {
+    "title": "Global Language Support",
+    "description": "Native support for 70+ languages with high accuracy"
+  },
+  "about": {
+    "title": "Engineered for Speed. Built for Production.",
+    "description": "TAED is designed to solve the complex challenges of visual intelligence across different document types, formats, and industries. Our AI-powered platform understands context, handles complex visual data, and extracts structured JSON with unprecedented accuracy.",
+    "point1": "Enterprise-grade security and compliance",
+    "point2": "99.9% uptime SLA guarantee",
+    "point3": "Dedicated support for engineering teams"
+  },
+  "cta": {
+    "title": "Ready to Ship Vision Logic?",
+    "description": "Join thousands of engineering teams using TAED to automate their visual intelligence pipelines.",
+    "button": "Deploy Your First Engine Free",
+    "note": "No credit card required. $10 free credit included."
+  },
+  "footer": {
+    "description": "The Vision Layer for Modern Apps. Chain visual logic, define JSON schemas, and deploy production-grade vision engines.",
+    "product": "Product",
+    "company": "Company",
+    "legal": "Legal",
+    "features": "Features",
+    "pricing": "Pricing",
+    "documentation": "Documentation",
+    "apiReference": "API Reference",
+    "about": "About",
+    "blog": "Blog",
+    "careers": "Careers",
+    "contact": "Contact",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "security": "Security",
+    "copyright": "All rights reserved."
+  },
+  "contact": {
+    "title": "Get in Touch",
+    "description": "Have questions about TAED? We'd love to hear from you. Send us a message and we'll respond as soon as possible.",
+    "form": {
+      "name": "Full Name",
+      "namePlaceholder": "John Doe",
+      "email": "Email Address",
+      "emailPlaceholder": "john@company.com",
+      "company": "Company",
+      "companyPlaceholder": "Your Company",
+      "subject": "Subject",
+      "subjectPlaceholder": "How can we help?",
+      "message": "Message",
+      "messagePlaceholder": "Tell us about your document processing needs...",
+      "submit": "Send Message",
+      "sending": "Sending..."
+    },
+    "info": {
+      "title": "Contact Information",
+      "description": "Reach out to us through any of these channels",
+      "email": "Email",
+      "response": "Response Time",
+      "responseValue": "Within 24 hours",
+      "support": "Support",
+      "supportValue": "24/7 for Enterprise"
+    },
+    "faq": {
+      "title": "Frequently Asked Questions",
+      "q1": "What file formats do you support?",
+      "a1": "We support PDF, PNG, JPG, TIFF, BMP, and WebP formats. Documents can be scanned images or digital files.",
+      "q2": "How accurate is the OCR?",
+      "a2": "Our OCR achieves 99.5%+ accuracy on clear documents and 95%+ on challenging scans, with continuous improvements through AI.",
+      "q3": "Is there an API available?",
+      "a3": "Yes! We offer a comprehensive REST API with SDKs for Python, JavaScript, Go, and more. Check our documentation for details."
+    }
+  },
+  "app": {
+    "myApis": "My APIs",
+    "createNewApi": "Create New API",
+    "noSavedApis": "No saved APIs yet",
+    "noSavedApisDesc": "Extract data from a document and save your first API",
+    "use": "Use",
+    "curl": "CURL",
+    "fields": "fields",
+    "createdBy": "Created by",
+    "uploadDocument": "Upload Document",
+    "uploadDesc": "Drag and drop or click to upload",
+    "supportedFormats": "Supports PDF, PNG, JPG up to 10MB",
+    "extractionFields": "Extraction Fields",
+    "extractionFieldsDesc": "Define what data you want to extract",
+    "fieldName": "Field Name",
+    "fieldNamePlaceholder": "e.g., invoice_number",
+    "description": "Description",
+    "descriptionPlaceholder": "e.g., The invoice or document number",
+    "addField": "Add Field",
+    "extractData": "Extract Data",
+    "extracting": "Extracting...",
+    "results": "Extraction Results",
+    "table": "Table",
+    "json": "JSON",
+    "lockAndSave": "Lock Fields & Save API",
+    "field": "Field",
+    "value": "Value",
+    "apiLocked": "API Configuration Locked",
+    "activeApi": "Active API",
+    "unlock": "Unlock",
+    "getCurl": "Get CURL",
+    "nameYourApi": "Name Your API",
+    "apiNameLabel": "API Name",
+    "apiNamePlaceholder": "e.g., Invoice Extractor",
+    "cancel": "Cancel",
+    "saveApi": "Save API",
+    "curlCommand": "CURL Command",
+    "curlDesc": "Use this command to extract data from documents via API",
+    "copyCurl": "Copy CURL"
+  },
+  "auth": {
+    "welcomeBack": "Welcome back",
+    "signInTo": "Sign in to your TAED account",
+    "createAccount": "Create an account",
+    "getStartedWith": "Get started with TAED",
+    "email": "Email",
+    "password": "Password",
+    "fullName": "Full Name",
+    "signIn": "Sign In",
+    "signingIn": "Signing in...",
+    "signUp": "Sign Up",
+    "creatingAccount": "Creating account...",
+    "noAccount": "Don't have an account?",
+    "haveAccount": "Already have an account?",
+    "signUpLink": "Sign up",
+    "signInLink": "Sign in"
+  }
+}
