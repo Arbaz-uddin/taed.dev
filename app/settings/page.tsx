@@ -93,61 +93,26 @@ export default function SettingsPage() {
 
       setUser({ id: authUser.id, email: authUser.email || '' })
 
-      // Load profile
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', authUser.id)
-        .single()
-
-      if (profileData) {
-        setProfile(profileData)
-        setFullName(profileData.full_name || '')
-      }
-
-      // Load payment methods
-      const { data: payments } = await supabase
-        .from('payment_methods')
-        .select('*')
-        .eq('user_id', authUser.id)
-        .order('created_at', { ascending: false })
-
-      if (payments) {
-        setPaymentMethods(payments)
-      }
-
-      // Load usage logs (last 30 days)
+      // Load all data in parallel for faster loading
       const thirtyDaysAgo = new Date()
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-      
-      const { data: logs } = await supabase
-        .from('api_usage_logs')
-        .select('id, api_id, file_name, success, processing_time_ms, created_at')
-        .eq('user_id', authUser.id)
-        .gte('created_at', thirtyDaysAgo.toISOString())
-        .order('created_at', { ascending: false })
 
-      if (logs) {
-        setUsageLogs(logs)
+      const [profileResult, paymentsResult, logsResult, apisResult, transactionsResult] = await Promise.all([
+        supabase.from('profiles').select('*').eq('id', authUser.id).single(),
+        supabase.from('payment_methods').select('*').eq('user_id', authUser.id).order('created_at', { ascending: false }),
+        supabase.from('api_usage_logs').select('id, api_id, file_name, success, processing_time_ms, created_at').eq('user_id', authUser.id).gte('created_at', thirtyDaysAgo.toISOString()).order('created_at', { ascending: false }),
+        supabase.from('saved_apis').select('id, name').eq('user_id', authUser.id),
+        supabase.from('wallet_transactions').select('*').eq('user_id', authUser.id).order('created_at', { ascending: false }).limit(50)
+      ])
+
+      if (profileResult.data) {
+        setProfile(profileResult.data)
+        setFullName(profileResult.data.full_name || '')
       }
-
-      // Load saved APIs for breakdown
-      const { data: apis } = await supabase
-        .from('saved_apis')
-        .select('id, name')
-        .eq('user_id', authUser.id)
-
-      if (apis) {
-        setSavedAPIs(apis)
-      }
-
-      // Load wallet transactions
-      const { data: transactions } = await supabase
-        .from('wallet_transactions')
-        .select('*')
-        .eq('user_id', authUser.id)
-        .order('created_at', { ascending: false })
-        .limit(50)
+      if (paymentsResult.data) setPaymentMethods(paymentsResult.data)
+      if (logsResult.data) setUsageLogs(logsResult.data)
+      if (apisResult.data) setSavedAPIs(apisResult.data)
+      if (transactionsResult.data) setWalletTransactions(transactionsResult.data)
 
       if (transactions) {
         setWalletTransactions(transactions)
