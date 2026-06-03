@@ -103,7 +103,6 @@ function OCREngineContent() {
   const [authLoading, setAuthLoading] = useState(true)
 
   const router = useRouter()
-  const supabase = createClient()
 
   // Check auth and load user data
 useEffect(() => {
@@ -116,6 +115,8 @@ useEffect(() => {
     setTimeout(() => setEmailVerified(false), 5000)
   }
   
+  const supabase = createClient()
+  
   const checkAuth = async () => {
       try {
         const { data: { user: authUser } } = await supabase.auth.getUser()
@@ -127,7 +128,7 @@ useEffect(() => {
 
         setUser({ id: authUser.id, email: authUser.email || '' })
 
-        // Load profile
+        // Load profile and team in parallel
         const { data: profileData } = await supabase
           .from('profiles')
           .select('*')
@@ -139,15 +140,14 @@ useEffect(() => {
 
           // Load team if user has one
           if (profileData.team_id) {
-            const { data: teamData } = await supabase
+            supabase
               .from('teams')
               .select('*')
               .eq('id', profileData.team_id)
               .single()
-            
-            if (teamData) {
-              setTeam(teamData)
-            }
+              .then(({ data: teamData }) => {
+                if (teamData) setTeam(teamData)
+              })
           }
         }
       } catch (err) {
@@ -167,13 +167,14 @@ useEffect(() => {
     })
 
     return () => subscription.unsubscribe()
-  }, [router, supabase])
+  }, [router, searchParams])
 
   // Load saved APIs from Supabase
   useEffect(() => {
     const loadAPIs = async () => {
       if (!user) return
 
+      const supabase = createClient()
       setLoadingAPIs(true)
       try {
         // Get user's own APIs (and team APIs if user has a team)
@@ -207,9 +208,10 @@ useEffect(() => {
     }
 
     loadAPIs()
-  }, [user, supabase])
+  }, [user])
 
   const handleSignOut = async () => {
+    const supabase = createClient()
     await supabase.auth.signOut()
     router.push('/auth/login')
   }
@@ -378,8 +380,8 @@ useEffect(() => {
       const data = await response.json()
       const processingTime = Date.now() - startTime
 
-      // Log usage
-      await supabase.from('api_usage_logs').insert({
+      // Log usage (non-blocking)
+      createClient().from('api_usage_logs').insert({
         user_id: user.id,
         api_id: activeAPIId,
         team_id: profile?.team_id,

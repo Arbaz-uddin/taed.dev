@@ -2,17 +2,18 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { LanguageSelector } from '@/components/language-selector'
 import { useLanguage } from '@/lib/language-context'
 import { UserMenu } from '@/components/user-menu'
 import { Menu, X } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 export function Navbar() {
   const pathname = usePathname()
+  const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { t } = useLanguage()
 
@@ -22,6 +23,21 @@ export function Navbar() {
     { href: '/app', label: t.nav.dashboard },
     { href: '/contact', label: 'Enterprise' },
   ]
+
+  // Prefetch all nav routes on mount for instant navigation
+  useEffect(() => {
+    navLinks.forEach(link => {
+      router.prefetch(link.href)
+    })
+    // Also prefetch auth routes
+    router.prefetch('/auth/login')
+    router.prefetch('/auth/sign-up')
+  }, [router])
+
+  // Prefetch on hover for even faster navigation
+  const handleMouseEnter = useCallback((href: string) => {
+    router.prefetch(href)
+  }, [router])
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl">
@@ -52,6 +68,7 @@ export function Navbar() {
             <Link
               key={link.href}
               href={link.href}
+              onMouseEnter={() => handleMouseEnter(link.href)}
               className={`text-sm font-medium transition-colors hover:text-primary ${
                 pathname === link.href ? 'text-primary' : 'text-muted-foreground'
               }`}
