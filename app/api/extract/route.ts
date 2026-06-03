@@ -4,9 +4,9 @@ import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 
-// Gemini 2.0 Flash pricing per 1M tokens
-const INPUT_COST_PER_1M = 0.075
-const OUTPUT_COST_PER_1M = 0.30
+// OpenAI GPT-4o-mini pricing per 1M tokens
+const INPUT_COST_PER_1M = 0.15
+const OUTPUT_COST_PER_1M = 0.60
 const MARKUP = 1.30 // 30% markup
 
 // Create admin client for wallet operations
@@ -85,7 +85,7 @@ export async function POST(req: Request) {
       .join('\n')
 
     const result = await generateText({
-      model: 'google/gemini-3-flash',
+      model: 'openai/gpt-4o-mini',
       output: Output.object({ schema: extractionSchema }),
       messages: [
         {
