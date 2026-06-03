@@ -1381,7 +1381,7 @@ return (
 
       {/* CURL Command Dialog */}
       <Dialog open={showCurlDialog} onOpenChange={setShowCurlDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Terminal className="h-5 w-5" />
@@ -1457,6 +1457,29 @@ return (
                   </li>
                 ))}
               </ul>
+            </div>
+
+            {/* Error Codes Section */}
+            <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4">
+              <h4 className="mb-2 font-medium text-red-400">Error Codes:</h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-start gap-2">
+                  <code className="bg-red-500/20 px-2 py-0.5 rounded text-xs font-mono text-red-300 whitespace-nowrap">EXTRACTION_PIPELINE_FAILURE</code>
+                  <span className="text-red-300/80">HTTP 500 - The extraction pipeline encountered an unexpected error. Please try again or contact support.</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <code className="bg-red-500/20 px-2 py-0.5 rounded text-xs font-mono text-red-300 whitespace-nowrap">MODEL_COMPLIANCE_REFUSAL</code>
+                  <span className="text-red-300/80">HTTP 403 - The AI model refused to process this content due to safety/compliance policies.</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <code className="bg-red-500/20 px-2 py-0.5 rounded text-xs font-mono text-red-300 whitespace-nowrap">SCHEMA_MISMATCH_EMPTY_OUTPUT</code>
+                  <span className="text-red-300/80">HTTP 422 - The extraction returned empty or invalid data. The document may not contain the requested fields.</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <code className="bg-red-500/20 px-2 py-0.5 rounded text-xs font-mono text-red-300 whitespace-nowrap">UNREADABLE_IMAGE_CONTENT</code>
+                  <span className="text-red-300/80">HTTP 422 - The image/document could not be read. Please ensure the file is clear, properly oriented, and not corrupted.</span>
+                </div>
+              </div>
             </div>
 
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4">
