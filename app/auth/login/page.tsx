@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -14,6 +14,10 @@ import { Navbar } from '@/components/navbar'
 import HCaptcha from '@hcaptcha/react-hcaptcha'
 
 export default function LoginPage() {
+  const searchParams = useSearchParams()
+  const reason = searchParams.get('reason')
+  const redirect = searchParams.get('redirect')
+  
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -50,7 +54,8 @@ export default function LoginPage() {
         return
       }
 
-      router.push('/app')
+      // Redirect to original page or default to /app
+      router.push(redirect || '/app')
       router.refresh()
     } catch {
       setError('An unexpected error occurred')
@@ -74,6 +79,13 @@ export default function LoginPage() {
           </CardHeader>
           <form onSubmit={handleLogin}>
             <CardContent className="space-y-4">
+              {reason === 'idle' && (
+                <Alert>
+                  <AlertDescription>
+                    You were logged out due to inactivity. Please sign in again.
+                  </AlertDescription>
+                </Alert>
+              )}
               {error && (
                 <Alert variant="destructive">
                   <AlertDescription>{error}</AlertDescription>
