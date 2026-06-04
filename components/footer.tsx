@@ -4,6 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useLanguage } from '@/lib/language-context'
 import { UserMenu } from '@/components/user-menu'
+import { TermsDialog } from '@/components/terms-dialog'
 
 export function Footer() {
   const { t } = useLanguage()
@@ -104,9 +105,18 @@ export function Footer() {
               Taed.dev is a property of Metavolv Technologies LLC, UAE. Proudly Made in UAE 🇦🇪
             </p>
           </div>
-          <p className="text-xs sm:text-sm text-muted-foreground">
-            Built for high-velocity engineering teams
-          </p>
+          <div className="flex items-center gap-4">
+            <TermsDialog
+              trigger={
+                <button className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline">
+                  Privacy Policy &amp; Terms of Use
+                </button>
+              }
+            />
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              Built for high-velocity engineering teams
+            </p>
+          </div>
         </div>
       </div>
     </footer>
