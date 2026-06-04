@@ -54,9 +54,8 @@ export default function LoginPage() {
         return
       }
 
-      // Redirect to original page or default to /app
-      router.push(redirect || '/app')
-      router.refresh()
+      // Use hard redirect to ensure cookies are properly set before navigation
+      window.location.href = redirect || '/app'
     } catch {
       setError('An unexpected error occurred')
       captchaRef.current?.resetCaptcha()
