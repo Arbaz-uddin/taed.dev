@@ -139,13 +139,15 @@ useEffect(() => {
   
   const checkAuth = async () => {
       try {
-        const { data: { user: authUser } } = await supabase.auth.getUser()
+        const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
         
-        if (!authUser) {
-          router.push('/auth/login')
+        if (authError || !authUser) {
+          console.log('[v0] No authenticated user, redirecting to login')
+          window.location.href = '/auth/login'
           return
         }
 
+        console.log('[v0] User authenticated:', authUser.id)
         setUser({ id: authUser.id, email: authUser.email || '' })
 
         // Load profile, team, and APIs all in parallel for faster loading
@@ -182,11 +184,13 @@ useEffect(() => {
             ownerName: api.user_id === authUser.id ? 'Me' : 'Team Member',
             clonedFrom: api.cloned_from,
           })))
-          setLoadingAPIs(false)
         }
+        
+        // Always set loading states to false after data fetching
+        setLoadingAPIs(false)
       } catch (err) {
-        console.error('Auth error:', err)
-        router.push('/auth/login')
+        console.error('[v0] Auth error:', err)
+        window.location.href = '/auth/login'
       } finally {
         setAuthLoading(false)
       }
@@ -196,7 +200,7 @@ useEffect(() => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, session: { user: unknown } | null) => {
       if (!session) {
-        router.push('/auth/login')
+        window.location.href = '/auth/login'
       }
     })
 
@@ -206,7 +210,7 @@ useEffect(() => {
   const handleSignOut = async () => {
     const supabase = createClient()
     await supabase.auth.signOut()
-    router.push('/auth/login')
+        window.location.href = '/auth/login'
   }
 
   const handleFileSelect = useCallback((selectedFile: File) => {

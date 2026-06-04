@@ -1,21 +1,20 @@
 'use client'
 
 import { useEffect, useCallback, useRef } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 // 10 minutes in milliseconds
 const IDLE_TIMEOUT = 10 * 60 * 1000
 
 export function useIdleTimeout() {
-  const router = useRouter()
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const supabase = createClient()
 
   const handleLogout = useCallback(async () => {
     await supabase.auth.signOut()
-    router.push('/auth/login?reason=idle')
-  }, [supabase, router])
+    // Use hard redirect to ensure cookies are cleared properly
+    window.location.href = '/auth/login?reason=idle'
+  }, [supabase])
 
   const resetTimer = useCallback(() => {
     if (timeoutRef.current) {

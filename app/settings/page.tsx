@@ -91,7 +91,7 @@ export default function SettingsPage() {
       const { data: { user: authUser } } = await supabase.auth.getUser()
       
       if (!authUser) {
-        router.push('/auth/login')
+        window.location.href = '/auth/login'
         return
       }
 

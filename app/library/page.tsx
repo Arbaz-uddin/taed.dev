@@ -88,7 +88,7 @@ export default function APILibraryPage() {
 
   const handleAddToMyAPIs = async (libraryAPI: SavedAPI) => {
     if (!user || !profile) {
-      router.push('/auth/login?redirect=/library')
+      window.location.href = '/auth/login?redirect=/library'
       return
     }
 
