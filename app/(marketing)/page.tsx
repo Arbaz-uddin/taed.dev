@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Navbar } from '@/components/navbar'
-import { Footer } from '@/components/footer'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useTheme } from 'next-themes'
@@ -479,7 +478,7 @@ import pdfplumber
         </div>
       </section>
 
-      <Footer />
+
     </div>
   )
 }
