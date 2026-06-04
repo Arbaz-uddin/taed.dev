@@ -142,19 +142,17 @@ useEffect(() => {
         const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
         
         if (authError || !authUser) {
-          console.log('[v0] No authenticated user, redirecting to login')
           window.location.href = '/auth/login'
           return
         }
 
-        console.log('[v0] User authenticated:', authUser.id)
         setUser({ id: authUser.id, email: authUser.email || '' })
 
-        // Load profile, team, and APIs all in parallel for faster loading
-        const profilePromise = supabase.from('profiles').select('*').eq('id', authUser.id).single()
-        const apisPromise = supabase.from('saved_apis').select('*').order('created_at', { ascending: false })
-
-        const [profileResult, apisResult] = await Promise.all([profilePromise, apisPromise])
+        // Load profile and APIs in parallel for faster loading
+        const [profileResult, apisResult] = await Promise.all([
+          supabase.from('profiles').select('*').eq('id', authUser.id).single(),
+          supabase.from('saved_apis').select('*').order('created_at', { ascending: false })
+        ])
 
         if (profileResult.data) {
           setProfile(profileResult.data)
@@ -186,26 +184,23 @@ useEffect(() => {
           })))
         }
         
-        // Always set loading states to false after data fetching
         setLoadingAPIs(false)
-      } catch (err) {
-        console.error('[v0] Auth error:', err)
-        window.location.href = '/auth/login'
-      } finally {
         setAuthLoading(false)
+      } catch {
+        window.location.href = '/auth/login'
       }
     }
 
     checkAuth()
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, session: { user: unknown } | null) => {
-      if (!session) {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' || !session) {
         window.location.href = '/auth/login'
       }
     })
 
     return () => subscription.unsubscribe()
-  }, [router, searchParams])
+  }, [searchParams])
 
   const handleSignOut = async () => {
     const supabase = createClient()
