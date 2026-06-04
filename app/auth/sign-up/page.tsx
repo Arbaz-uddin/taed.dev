@@ -9,9 +9,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Loader2 } from 'lucide-react'
 import { Navbar } from '@/components/navbar'
 import HCaptcha from '@hcaptcha/react-hcaptcha'
+import { TermsDialog } from '@/components/terms-dialog'
 
 export default function SignUpPage() {
   const [email, setEmail] = useState('')
@@ -20,6 +22,7 @@ export default function SignUpPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [captchaToken, setCaptchaToken] = useState<string | undefined>()
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
   const captchaRef = useRef<HCaptcha>(null)
   const router = useRouter()
   const supabase = createClient()
@@ -132,9 +135,30 @@ export default function SignUpPage() {
                 size="compact"
               />
             </div>
+            <div className="flex items-start space-x-2 pt-2">
+              <Checkbox
+                id="terms"
+                checked={acceptedTerms}
+                onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
+                disabled={loading}
+              />
+              <label
+                htmlFor="terms"
+                className="text-sm text-muted-foreground leading-tight cursor-pointer"
+              >
+                I have read and agree to the{' '}
+                <TermsDialog
+                  trigger={
+                    <button type="button" className="text-primary hover:underline font-medium">
+                      Terms of Use and Privacy Policy
+                    </button>
+                  }
+                />
+              </label>
+            </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-4 pt-2">
-            <Button type="submit" className="w-full" disabled={loading || !captchaToken}>
+            <Button type="submit" className="w-full" disabled={loading || !captchaToken || !acceptedTerms}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Create Account
             </Button>

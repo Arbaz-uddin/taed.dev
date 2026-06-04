@@ -10,7 +10,6 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Navbar } from '@/components/navbar'
-import { Footer } from '@/components/footer'
 import { 
   Search, Library, FileText, Plus, Loader2, Check, Filter, 
   ArrowRight, Lock, LogIn
@@ -323,7 +322,7 @@ export default function APILibraryPage() {
         )}
       </div>
 
-      <Footer />
+
     </main>
   )
 }
