@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { useLanguage } from '@/lib/language-context'
 import { UserMenu } from '@/components/user-menu'
 import { TermsDialog } from '@/components/terms-dialog'
+import { TaedSurveyDialog } from '@/components/taed-survey-dialog'
 
 export function Footer() {
   const { t } = useLanguage()
@@ -117,6 +118,17 @@ export function Footer() {
               Built for high-velocity engineering teams
             </p>
           </div>
+        </div>
+
+        {/* Fun Survey */}
+        <div className="mt-6 text-center">
+          <TaedSurveyDialog
+            trigger={
+              <span className="text-xs text-muted-foreground hover:text-primary transition-colors cursor-pointer underline-offset-4 hover:underline">
+                Guess what TAED stands for?
+              </span>
+            }
+          />
         </div>
       </div>
     </footer>
