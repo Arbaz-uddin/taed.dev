@@ -136,12 +136,19 @@ useEffect(() => {
   }
   
   const supabase = createClient()
+  let isMounted = true
   
   const checkAuth = async () => {
       try {
+        console.log('[v0] Checking auth...')
         const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
         
+        console.log('[v0] Auth result:', { hasUser: !!authUser, error: authError?.message })
+        
+        if (!isMounted) return
+        
         if (authError || !authUser) {
+          console.log('[v0] No user, redirecting to login')
           window.location.href = '/auth/login'
           return
         }
@@ -149,11 +156,15 @@ useEffect(() => {
         setUser({ id: authUser.id, email: authUser.email || '' })
 
         // Load profile and APIs in parallel for faster loading
+        console.log('[v0] Loading profile and APIs...')
         const [profileResult, apisResult] = await Promise.all([
           supabase.from('profiles').select('*').eq('id', authUser.id).single(),
           supabase.from('saved_apis').select('*').order('created_at', { ascending: false })
         ])
 
+        if (!isMounted) return
+
+        console.log('[v0] Profile loaded:', !!profileResult.data)
         if (profileResult.data) {
           setProfile(profileResult.data)
 
@@ -165,11 +176,12 @@ useEffect(() => {
               .eq('id', profileResult.data.team_id)
               .single()
               .then(({ data: teamData }: { data: Team | null }) => {
-                if (teamData) setTeam(teamData)
+                if (isMounted && teamData) setTeam(teamData)
               })
           }
         }
 
+        console.log('[v0] APIs loaded:', apisResult.data?.length || 0)
         if (apisResult.data) {
           setSavedAPIs(apisResult.data.map((api: SavedAPI) => ({
             id: api.id,
@@ -186,20 +198,29 @@ useEffect(() => {
         
         setLoadingAPIs(false)
         setAuthLoading(false)
-      } catch {
-        window.location.href = '/auth/login'
+        console.log('[v0] Auth loading complete')
+      } catch (err) {
+        console.error('[v0] Auth error:', err)
+        if (isMounted) {
+          window.location.href = '/auth/login'
+        }
       }
     }
 
     checkAuth()
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT' || !session) {
+    // Only redirect on explicit sign out, not on initial state
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      console.log('[v0] Auth state change:', event)
+      if (event === 'SIGNED_OUT') {
         window.location.href = '/auth/login'
       }
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      isMounted = false
+      subscription.unsubscribe()
+    }
   }, [searchParams])
 
   const handleSignOut = async () => {
