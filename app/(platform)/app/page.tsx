@@ -139,19 +139,19 @@ useEffect(() => {
   
   const checkAuth = async () => {
       try {
-        // The session is already validated by middleware for /app, so use the
-        // local getClaims() (no Auth API round-trip) to read the user instead
-        // of getUser(). This unblocks the UI almost immediately.
-        const { data: claimsData } = await supabase.auth.getClaims()
-        const claims = claimsData?.claims
+        // The route is already protected by middleware. Read the session from
+        // the client (reads the synced cookie/local session, reliable) and
+        // unblock the UI as soon as we know who the user is.
+        const { data: { session } } = await supabase.auth.getSession()
+        const authUser = session?.user
 
-        if (!claims?.sub) {
+        if (!authUser) {
           router.push('/auth/login')
           return
         }
 
-        const authUserId = claims.sub as string
-        const authUserEmail = (claims.email as string) || ''
+        const authUserId = authUser.id
+        const authUserEmail = authUser.email || ''
 
         setUser({ id: authUserId, email: authUserEmail })
         // We have an authenticated user — let the UI render now and stream the

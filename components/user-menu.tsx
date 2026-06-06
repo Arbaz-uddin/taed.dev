@@ -38,19 +38,19 @@ export function UserMenu({
   const fetchUserAndProfile = useCallback(async () => {
     const supabase = createClient()
     try {
-      // getClaims() reads the session locally (no Auth API round-trip).
-      const { data: claimsData } = await supabase.auth.getClaims()
-      const claims = claimsData?.claims
+      // Read the session from the synced client session (reliable, no network).
+      const { data: { session } } = await supabase.auth.getSession()
+      const authUser = session?.user
 
-      if (!claims?.sub) return
+      if (!authUser) return
 
-      setUser({ id: claims.sub, email: claims.email } as User)
+      setUser(authUser)
 
       // Fetch profile without blocking
       supabase
         .from('profiles')
         .select('id, full_name, wallet_balance')
-        .eq('id', claims.sub)
+        .eq('id', authUser.id)
         .single()
         .then(({ data }: { data: Profile | null }) => {
           if (data) setProfile(data)
