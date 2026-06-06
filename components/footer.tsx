@@ -13,7 +13,7 @@ export function Footer() {
   return (
     <footer className="border-t border-border bg-card">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:py-12 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 gap-6 sm:gap-8 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-6 sm:gap-8 md:grid-cols-3">
           {/* Logo & Description */}
           <div className="col-span-2 md:col-span-1">
             <Link href="/">
@@ -74,23 +74,6 @@ export function Footer() {
               <li>
                 <Link href="/#about" className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors">
                   {t.footer.about}
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Legal */}
-          <div>
-            <h3 className="text-xs sm:text-sm font-semibold mb-3 sm:mb-4">{t.footer.legal}</h3>
-            <ul className="space-y-2 sm:space-y-3">
-              <li>
-                <Link href="/privacy" className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors">
-                  {t.footer.privacy}
-                </Link>
-              </li>
-              <li>
-                <Link href="/terms" className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors">
-                  {t.footer.terms}
                 </Link>
               </li>
             </ul>
