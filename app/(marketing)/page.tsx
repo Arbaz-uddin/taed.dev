@@ -42,8 +42,10 @@ export default function HomePage() {
     }).finally(() => setAuthChecked(true))
   }, [])
 
+
   const logoSrc = mounted && resolvedTheme === 'light' ? '/logo-light.png' : '/logo-dark.png'
 
+  
   const copyCurl = async () => {
     const curlCommand = `fetch('https://api.taed.dev/v1/engine', {
   method: 'POST',
