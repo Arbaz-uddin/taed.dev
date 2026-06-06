@@ -5,6 +5,16 @@ import { NextResponse, type NextRequest } from 'next/server'
 const PROTECTED_ROUTES = ['/app', '/settings', '/team', '/admin']
 
 export async function updateSession(request: NextRequest) {
+  const isProtectedRoute = PROTECTED_ROUTES.some(route =>
+    request.nextUrl.pathname.startsWith(route)
+  )
+
+  // Public pages do not need a server-side auth round trip. Client components
+  // can read the cached session when they only need to adjust the UI.
+  if (!isProtectedRoute) {
+    return NextResponse.next({ request })
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   })
@@ -34,22 +44,13 @@ export async function updateSession(request: NextRequest) {
     },
   )
 
-  // Do not run code between createServerClient and
-  // supabase.auth.getUser(). A simple mistake could make it very hard to debug
-  // issues with users being randomly logged out.
-
-  // IMPORTANT: If you remove getUser() and you use server-side rendering
-  // with the Supabase client, your users may be randomly logged out.
+  // Protected routes must refresh and validate the session so the updated
+  // auth cookies are forwarded with the response.
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Check if the current path is a protected route
-  const isProtectedRoute = PROTECTED_ROUTES.some(route => 
-    request.nextUrl.pathname.startsWith(route)
-  )
-
-  if (isProtectedRoute && !user) {
+  if (!user) {
     // No user, redirect to login page
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'

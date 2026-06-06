@@ -139,7 +139,8 @@ useEffect(() => {
   
   const checkAuth = async () => {
       try {
-        const { data: { user: authUser } } = await supabase.auth.getUser()
+        const { data: { session } } = await supabase.auth.getSession()
+        const authUser = session?.user ?? null
         
         if (!authUser) {
           router.push('/auth/login')
@@ -147,10 +148,11 @@ useEffect(() => {
         }
 
         setUser({ id: authUser.id, email: authUser.email || '' })
+        setAuthLoading(false)
 
         // Load profile, team, and APIs all in parallel for faster loading
-        const profilePromise = supabase.from('profiles').select('*').eq('id', authUser.id).single()
-        const apisPromise = supabase.from('saved_apis').select('*').order('created_at', { ascending: false })
+        const profilePromise = supabase.from('profiles').select('id, email, full_name, role, team_id, wallet_balance, api_key, created_at, updated_at').eq('id', authUser.id).single()
+        const apisPromise = supabase.from('saved_apis').select('id, user_id, team_id, name, fields, description, created_at, cloned_from').order('created_at', { ascending: false })
 
         const [profileResult, apisResult] = await Promise.all([profilePromise, apisPromise])
 
@@ -182,13 +184,13 @@ useEffect(() => {
             ownerName: api.user_id === authUser.id ? 'Me' : 'Team Member',
             clonedFrom: api.cloned_from,
           })))
-          setLoadingAPIs(false)
         }
       } catch (err) {
         console.error('Auth error:', err)
         router.push('/auth/login')
       } finally {
         setAuthLoading(false)
+        setLoadingAPIs(false)
       }
     }
 
