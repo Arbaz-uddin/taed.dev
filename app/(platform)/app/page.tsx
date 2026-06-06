@@ -137,6 +137,7 @@ useEffect(() => {
   
   const supabase = createClient()
   
+  
   const checkAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession()
