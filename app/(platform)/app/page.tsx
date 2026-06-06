@@ -136,7 +136,10 @@ useEffect(() => {
   }
   
   const supabase = createClient()
-  
+
+  // Safety net: never let the auth check keep the spinner up indefinitely.
+  const authTimeout = setTimeout(() => setAuthLoading(false), 4000)
+
   const checkAuth = async () => {
       try {
         // The route is already protected by middleware. Read the session from
@@ -198,6 +201,7 @@ useEffect(() => {
         console.error('Auth error:', err)
         router.push('/auth/login')
       } finally {
+        clearTimeout(authTimeout)
         setAuthLoading(false)
       }
     }
@@ -210,7 +214,10 @@ useEffect(() => {
       }
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      clearTimeout(authTimeout)
+      subscription.unsubscribe()
+    }
   }, [router, searchParams])
 
   const handleSignOut = async () => {
