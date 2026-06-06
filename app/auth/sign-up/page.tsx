@@ -129,7 +129,7 @@ export default function SignUpPage() {
             <div className="flex justify-center pt-2">
               <HCaptcha
                 ref={captchaRef}
-                sitekey={process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY!}
+                sitekey="515c16ce-dae6-4176-824e-d5988d1674fa"
                 onVerify={(token) => setCaptchaToken(token)}
                 onExpire={() => setCaptchaToken(undefined)}
                 size="compact"
