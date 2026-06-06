@@ -36,15 +36,21 @@ export function UserMenu({
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [authChecked, setAuthChecked] = useState(false)
 
   const fetchUserAndProfile = useCallback(async () => {
     const supabase = createClient()
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { session } } = await supabase.auth.getSession()
+      const user = session?.user ?? null
       
-      if (!user) return
+      if (!user) {
+        setAuthChecked(true)
+        return
+      }
       
       setUser(user)
+      setAuthChecked(true)
 
       // Fetch profile without blocking
       supabase
@@ -57,6 +63,7 @@ export function UserMenu({
         })
     } catch {
       // Silent fail - show login buttons
+      setAuthChecked(true)
     }
   }, [])
 
@@ -64,15 +71,18 @@ export function UserMenu({
     fetchUserAndProfile()
 
     const supabase = createClient()
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: string, session: { user: User } | null) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, session: { user: User } | null) => {
       setUser(session?.user ?? null)
+      setAuthChecked(true)
       if (session?.user) {
-        const { data } = await supabase
+        supabase
           .from('profiles')
           .select('id, full_name, wallet_balance')
           .eq('id', session.user.id)
           .single()
-        if (data) setProfile(data)
+          .then(({ data }: { data: Profile | null }) => {
+            if (data) setProfile(data)
+          })
       } else {
         setProfile(null)
       }
@@ -99,6 +109,10 @@ export function UserMenu({
 
   // Show login buttons immediately - no loading state
   if (!user) {
+    if (!authChecked) {
+      return <div className="h-9 w-36" aria-hidden="true" />
+    }
+
     if (!showLoginButtons) return null
     
     return (

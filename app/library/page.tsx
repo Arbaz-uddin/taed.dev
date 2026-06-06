@@ -37,17 +37,37 @@ export default function APILibraryPage() {
   const loadData = async () => {
     const supabase = createClient()
     try {
-      // Check auth status
-      const { data: { user: authUser } } = await supabase.auth.getUser()
+      const libraryPromise = supabase
+        .from('saved_apis')
+        .select('id, user_id, team_id, name, fields, is_library, description, category, cloned_from, selected_provider, selected_model, is_custom_model, custom_endpoint_url, custom_model_auth_key_env_var, created_at, updated_at')
+        .eq('is_library', true)
+        .order('created_at', { ascending: false })
+
+      const categoriesPromise = supabase
+        .from('api_categories')
+        .select('id, name, created_by, created_at')
+        .order('name', { ascending: true })
+
+      // This page is public, so a cached session is enough for UI personalization.
+      const { data: { session } } = await supabase.auth.getSession()
+      const authUser = session?.user ?? null
+
+      const userDataPromise = authUser
+        ? Promise.all([
+            supabase.from('profiles').select('id, email, full_name, role, team_id, wallet_balance, api_key, created_at, updated_at').eq('id', authUser.id).single(),
+            supabase.from('saved_apis').select('cloned_from').eq('user_id', authUser.id).not('cloned_from', 'is', null),
+          ])
+        : Promise.resolve(null)
+
+      const [libraryResult, categoriesResult, userData] = await Promise.all([
+        libraryPromise,
+        categoriesPromise,
+        userDataPromise,
+      ])
       
       if (authUser) {
         setUser(authUser)
-        
-        // Load profile and user's APIs in parallel
-        const [profileResult, userAPIsResult] = await Promise.all([
-          supabase.from('profiles').select('*').eq('id', authUser.id).single(),
-          supabase.from('saved_apis').select('cloned_from').eq('user_id', authUser.id).not('cloned_from', 'is', null)
-        ])
+        const [profileResult, userAPIsResult] = userData!
         
         if (profileResult.data) {
           setProfile(profileResult.data)
@@ -59,25 +79,12 @@ export default function APILibraryPage() {
         }
       }
 
-      // Load library APIs (visible to everyone)
-      const { data: apis } = await supabase
-        .from('saved_apis')
-        .select('*')
-        .eq('is_library', true)
-        .order('created_at', { ascending: false })
-
-      if (apis) {
-        setLibraryAPIs(apis)
+      if (libraryResult.data) {
+        setLibraryAPIs(libraryResult.data)
       }
 
-      // Load categories
-      const { data: cats } = await supabase
-        .from('api_categories')
-        .select('*')
-        .order('name', { ascending: true })
-
-      if (cats) {
-        setCategories(cats)
+      if (categoriesResult.data) {
+        setCategories(categoriesResult.data)
       }
     } catch (err) {
       console.error('Error loading library:', err)
@@ -135,14 +142,6 @@ export default function APILibraryPage() {
 
   const uniqueCategories = [...new Set(libraryAPIs.map(api => api.category).filter(Boolean))]
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    )
-  }
-
   return (
     <main className="min-h-screen bg-background">
       <Navbar />
@@ -161,7 +160,7 @@ export default function APILibraryPage() {
         </div>
 
         {/* Auth Banner for non-logged in users */}
-        {!user && (
+        {!loading && !user && (
           <Card className="mb-8 border-primary/20 bg-primary/5">
             <CardContent className="flex flex-col items-center justify-between gap-4 p-4 sm:flex-row sm:p-6">
               <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
@@ -219,7 +218,14 @@ export default function APILibraryPage() {
         </div>
 
         {/* API Grid */}
-        {filteredAPIs.length === 0 ? (
+        {loading ? (
+          <Card className="py-16 text-center">
+            <CardContent>
+              <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+              <p className="mt-3 text-sm text-muted-foreground">Loading API library...</p>
+            </CardContent>
+          </Card>
+        ) : filteredAPIs.length === 0 ? (
           <Card className="py-16 text-center">
             <CardContent>
               <FileText className="mx-auto mb-4 h-12 w-12 text-muted-foreground/50" />

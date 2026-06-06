@@ -30,19 +30,22 @@ export default function HomePage() {
   const [mounted, setMounted] = useState(false)
   const [curlCopied, setCurlCopied] = useState(false)
   const [user, setUser] = useState<User | null>(null)
+  const [authChecked, setAuthChecked] = useState(false)
 
   useEffect(() => {
     setMounted(true)
     
     // Non-blocking auth check
     const supabase = createClient()
-    supabase.auth.getUser().then((response: { data: { user: User | null } }) => {
-      setUser(response.data.user)
-    })
+    supabase.auth.getSession().then((response: { data: { session: { user: User } | null } }) => {
+      setUser(response.data.session?.user ?? null)
+    }).finally(() => setAuthChecked(true))
   }, [])
+
 
   const logoSrc = mounted && resolvedTheme === 'light' ? '/logo-light.png' : '/logo-dark.png'
 
+  
   const copyCurl = async () => {
     const curlCommand = `fetch('https://api.taed.dev/v1/engine', {
   method: 'POST',
@@ -118,6 +121,10 @@ export default function HomePage() {
 
   // Dynamic CTA based on auth state
   const HeroCTA = () => {
+    if (!authChecked) {
+      return <div className="h-11 w-full rounded-md bg-muted sm:w-52" aria-hidden="true" />
+    }
+
     if (user) {
       return (
         <Link href="/app" className="w-full sm:w-auto">
@@ -139,6 +146,10 @@ export default function HomePage() {
   }
 
   const FinalCTA = () => {
+    if (!authChecked) {
+      return <div className="h-11 w-full rounded-md bg-muted sm:w-60" aria-hidden="true" />
+    }
+
     if (user) {
       return (
         <Link href="/app" className="w-full sm:w-auto">
@@ -187,7 +198,7 @@ export default function HomePage() {
               </Button>
             </div>
 
-            {!user && (
+            {authChecked && !user && (
               <p className="mt-4 text-sm text-muted-foreground">
                 No credit card required. Free $10 credit applies automatically upon email verification.
               </p>

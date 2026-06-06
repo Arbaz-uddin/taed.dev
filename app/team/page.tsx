@@ -68,7 +68,8 @@ export default function TeamPage() {
   const loadData = async () => {
     setLoading(true)
     try {
-      const { data: { user: authUser } } = await supabase.auth.getUser()
+      const { data: { session } } = await supabase.auth.getSession()
+      const authUser = session?.user ?? null
       
       if (!authUser) {
         router.push('/auth/login')
@@ -77,32 +78,40 @@ export default function TeamPage() {
 
       setUser({ id: authUser.id, email: authUser.email || '' })
 
-      // Load profile
-      const { data: profileData } = await supabase
+      const profilePromise = supabase
         .from('profiles')
         .select('*')
         .eq('id', authUser.id)
         .single()
+
+      const receivedInvitationsPromise = supabase
+        .from('team_invitations')
+        .select('*, teams(*)')
+        .eq('invited_email', authUser.email)
+        .eq('status', 'pending')
+
+      const [{ data: profileData }, { data: received }] = await Promise.all([
+        profilePromise,
+        receivedInvitationsPromise,
+      ])
 
       if (profileData) {
         setProfile(profileData)
 
         // Load team if user has one
         if (profileData.team_id) {
-          const { data: teamData } = await supabase
-            .from('teams')
-            .select('*')
-            .eq('id', profileData.team_id)
-            .single()
+          const [teamResult, membersResult, invitationsResult] = await Promise.all([
+            supabase.from('teams').select('*').eq('id', profileData.team_id).single(),
+            supabase.from('profiles').select('*').eq('team_id', profileData.team_id),
+            supabase.from('team_invitations').select('*').eq('team_id', profileData.team_id).eq('status', 'pending'),
+          ])
+
+          const teamData = teamResult.data
           
           if (teamData) {
             setTeam(teamData)
 
-            // Load team members
-            const { data: members } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('team_id', profileData.team_id)
+            const members = membersResult.data
 
             if (members) {
               setTeamMembers(members.map((m: Profile) => ({
@@ -111,25 +120,13 @@ export default function TeamPage() {
               })))
             }
 
-            // Load pending invitations sent by the team
-            const { data: invitations } = await supabase
-              .from('team_invitations')
-              .select('*')
-              .eq('team_id', profileData.team_id)
-              .eq('status', 'pending')
+            const invitations = invitationsResult.data
 
             if (invitations) {
               setPendingInvitations(invitations)
             }
           }
         } else {
-          // Load invitations received by the user
-          const { data: received } = await supabase
-            .from('team_invitations')
-            .select('*, teams(*)')
-            .eq('invited_email', authUser.email)
-            .eq('status', 'pending')
-
           if (received) {
             setReceivedInvitations(received.map((inv: TeamInvitation & { teams: Team }) => ({
               ...inv,
