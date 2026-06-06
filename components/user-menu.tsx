@@ -64,15 +64,17 @@ export function UserMenu({
     fetchUserAndProfile()
 
     const supabase = createClient()
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: string, session: { user: User } | null) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, session: { user: User } | null) => {
       setUser(session?.user ?? null)
       if (session?.user) {
-        const { data } = await supabase
+        supabase
           .from('profiles')
           .select('id, full_name, wallet_balance')
           .eq('id', session.user.id)
           .single()
-        if (data) setProfile(data)
+          .then(({ data }: { data: Profile | null }) => {
+            if (data) setProfile(data)
+          })
       } else {
         setProfile(null)
       }
