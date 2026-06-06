@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -24,7 +24,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [captchaToken, setCaptchaToken] = useState<string | null>(null)
   const captchaRef = useRef<HCaptcha>(null)
-  const router = useRouter()
   const supabase = createClient()
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -54,9 +53,10 @@ export default function LoginPage() {
         return
       }
 
-      // Redirect to original page or default to /app
-      router.push(redirect || '/app')
-      router.refresh()
+      // Redirect to original page or default to /app.
+      // Use a full navigation so the new session cookie is sent with the
+      // request the middleware sees, and so we don't double-render.
+      window.location.assign(redirect || '/app')
     } catch {
       setError('An unexpected error occurred')
       captchaRef.current?.resetCaptcha()

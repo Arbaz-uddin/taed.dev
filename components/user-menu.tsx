@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import {
@@ -33,24 +32,25 @@ export function UserMenu({
   loginLabel = 'Login',
   getStartedLabel = 'Get Started'
 }: UserMenuProps) {
-  const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
 
   const fetchUserAndProfile = useCallback(async () => {
     const supabase = createClient()
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      if (!user) return
-      
-      setUser(user)
+      // getClaims() reads the session locally (no Auth API round-trip).
+      const { data: claimsData } = await supabase.auth.getClaims()
+      const claims = claimsData?.claims
+
+      if (!claims?.sub) return
+
+      setUser({ id: claims.sub, email: claims.email } as User)
 
       // Fetch profile without blocking
       supabase
         .from('profiles')
         .select('id, full_name, wallet_balance')
-        .eq('id', user.id)
+        .eq('id', claims.sub)
         .single()
         .then(({ data }: { data: Profile | null }) => {
           if (data) setProfile(data)
@@ -86,8 +86,8 @@ export function UserMenu({
     await supabase.auth.signOut()
     setUser(null)
     setProfile(null)
-    router.push('/')
-    router.refresh()
+    // Hard navigation guarantees the cleared session cookie is applied.
+    window.location.assign('/')
   }
 
   const getInitials = (name: string | null, email: string | undefined) => {

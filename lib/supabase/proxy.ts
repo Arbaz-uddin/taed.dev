@@ -34,22 +34,28 @@ export async function updateSession(request: NextRequest) {
     },
   )
 
-  // Do not run code between createServerClient and
-  // supabase.auth.getUser(). A simple mistake could make it very hard to debug
-  // issues with users being randomly logged out.
+  // Do not run code between createServerClient and the auth call below.
+  // A simple mistake could make it very hard to debug issues with users
+  // being randomly logged out.
 
-  // IMPORTANT: If you remove getUser() and you use server-side rendering
-  // with the Supabase client, your users may be randomly logged out.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  // Check if the current path is a protected route
-  const isProtectedRoute = PROTECTED_ROUTES.some(route => 
+  // Only validate the session for protected routes. For all other paths
+  // (landing page, marketing, public assets) we skip the auth call entirely
+  // so the middleware never blocks on a network round-trip.
+  const isProtectedRoute = PROTECTED_ROUTES.some(route =>
     request.nextUrl.pathname.startsWith(route)
   )
 
-  if (isProtectedRoute && !user) {
+  if (!isProtectedRoute) {
+    return supabaseResponse
+  }
+
+  // getClaims() verifies the JWT locally (no Auth API round-trip when using
+  // asymmetric signing keys) and still refreshes the session cookie via the
+  // cookie handlers above. This is much faster than getUser() on every request.
+  const { data } = await supabase.auth.getClaims()
+  const claims = data?.claims
+
+  if (!claims) {
     // No user, redirect to login page
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'

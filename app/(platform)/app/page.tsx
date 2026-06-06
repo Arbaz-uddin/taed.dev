@@ -139,17 +139,27 @@ useEffect(() => {
   
   const checkAuth = async () => {
       try {
-        const { data: { user: authUser } } = await supabase.auth.getUser()
-        
-        if (!authUser) {
+        // The session is already validated by middleware for /app, so use the
+        // local getClaims() (no Auth API round-trip) to read the user instead
+        // of getUser(). This unblocks the UI almost immediately.
+        const { data: claimsData } = await supabase.auth.getClaims()
+        const claims = claimsData?.claims
+
+        if (!claims?.sub) {
           router.push('/auth/login')
           return
         }
 
-        setUser({ id: authUser.id, email: authUser.email || '' })
+        const authUserId = claims.sub as string
+        const authUserEmail = (claims.email as string) || ''
 
-        // Load profile, team, and APIs all in parallel for faster loading
-        const profilePromise = supabase.from('profiles').select('*').eq('id', authUser.id).single()
+        setUser({ id: authUserId, email: authUserEmail })
+        // We have an authenticated user — let the UI render now and stream the
+        // profile/APIs in afterwards.
+        setAuthLoading(false)
+
+        // Load profile, team, and APIs in parallel for faster loading
+        const profilePromise = supabase.from('profiles').select('*').eq('id', authUserId).single()
         const apisPromise = supabase.from('saved_apis').select('*').order('created_at', { ascending: false })
 
         const [profileResult, apisResult] = await Promise.all([profilePromise, apisPromise])
@@ -179,7 +189,7 @@ useEffect(() => {
             createdAt: api.created_at,
             userId: api.user_id,
             teamId: api.team_id,
-            ownerName: api.user_id === authUser.id ? 'Me' : 'Team Member',
+            ownerName: api.user_id === authUserId ? 'Me' : 'Team Member',
             clonedFrom: api.cloned_from,
           })))
           setLoadingAPIs(false)
@@ -206,7 +216,9 @@ useEffect(() => {
   const handleSignOut = async () => {
     const supabase = createClient()
     await supabase.auth.signOut()
-    router.push('/auth/login')
+    // Hard navigation guarantees the cleared session cookie is picked up and
+    // avoids racing with the onAuthStateChange listener below.
+    window.location.assign('/auth/login')
   }
 
   const handleFileSelect = useCallback((selectedFile: File) => {
