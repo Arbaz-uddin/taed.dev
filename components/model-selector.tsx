@@ -61,19 +61,19 @@ export const MODEL_PROVIDERS = {
     name: 'Google Gemini',
     models: [
       { 
-        id: 'gemini-1.5-flash', 
-        name: 'Gemini 1.5 Flash', 
-        inputCost: 0.075, 
-        outputCost: 0.30,
+        id: 'gemini-2.5-flash', 
+        name: 'Gemini 2.5 Flash', 
+        inputCost: 0.30, 
+        outputCost: 2.50,
         contextWindow: 1000000,
         strengths: ['Massive context', 'Fast', 'Great for PDFs'],
         bestFor: 'Large documents, multi-page PDFs'
       },
       { 
-        id: 'gemini-1.5-pro', 
-        name: 'Gemini 1.5 Pro', 
+        id: 'gemini-2.5-pro', 
+        name: 'Gemini 2.5 Pro', 
         inputCost: 1.25, 
-        outputCost: 5.00,
+        outputCost: 10.00,
         contextWindow: 2000000,
         strengths: ['Best context window', 'Superior document understanding'],
         bestFor: 'Massive documents, complex layouts'
@@ -84,17 +84,17 @@ export const MODEL_PROVIDERS = {
     name: 'Anthropic',
     models: [
       { 
-        id: 'claude-3-5-haiku-latest', 
-        name: 'Claude 3.5 Haiku', 
-        inputCost: 0.80, 
-        outputCost: 4.00,
+        id: 'claude-haiku-4.5', 
+        name: 'Claude Haiku 4.5', 
+        inputCost: 1.00, 
+        outputCost: 5.00,
         contextWindow: 200000,
         strengths: ['Fast', 'Great reasoning', 'Long context'],
         bestFor: 'Quick extractions, balanced performance'
       },
       { 
-        id: 'claude-sonnet-4-20250514', 
-        name: 'Claude Sonnet 4', 
+        id: 'claude-sonnet-4.5', 
+        name: 'Claude Sonnet 4.5', 
         inputCost: 3.00, 
         outputCost: 15.00,
         contextWindow: 200000,
@@ -136,7 +136,7 @@ function getRecommendation(fileSizeBytes: number, fieldCount: number): {
   if (fileSizeMB > 5 || fieldCount > 10) {
     return {
       provider: 'GEMINI',
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.5-flash',
       reason: 'Superior Context Window & Document Layout Recovery'
     }
   }
@@ -154,7 +154,7 @@ function getRecommendation(fileSizeBytes: number, fieldCount: number): {
   if (fileSizeMB < 1 && fieldCount <= 5) {
     return {
       provider: 'ANTHROPIC',
-      model: 'claude-3-5-haiku-latest',
+      model: 'claude-haiku-4.5',
       reason: 'Fast & Accurate for Simple Documents'
     }
   }

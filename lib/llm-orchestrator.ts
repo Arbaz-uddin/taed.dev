@@ -1,6 +1,12 @@
 import { generateText, Output } from 'ai'
+import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { z } from 'zod'
 import type { ModelProvider } from '@/lib/types/database'
+
+// Direct Google provider (billed via GOOGLE_GENERATIVE_AI_API_KEY, not the AI Gateway)
+const google = createGoogleGenerativeAI({
+  apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
+})
 
 // Error codes for extraction pipeline
 export const ERROR_CODES = {
@@ -24,6 +30,26 @@ export const ERROR_CODES = {
     status: 422,
     message: 'The image/document could not be read. Please ensure the file is clear, properly oriented, and not corrupted.',
   },
+  MODEL_NOT_FOUND: {
+    code: 'MODEL_NOT_FOUND',
+    status: 400,
+    message: 'The selected model is no longer available. Please choose a different model and try again.',
+  },
+  PAYMENT_REQUIRED: {
+    code: 'PAYMENT_REQUIRED',
+    status: 402,
+    message: 'This model requires a paid plan. Add credits/billing for this provider (Vercel AI Gateway for OpenAI/Anthropic, or Google AI Studio for Gemini), then try again.',
+  },
+  RATE_LIMITED: {
+    code: 'RATE_LIMITED',
+    status: 429,
+    message: 'The model provider is rate-limiting requests. Please wait a moment and try again.',
+  },
+  MODEL_AUTH_FAILURE: {
+    code: 'MODEL_AUTH_FAILURE',
+    status: 401,
+    message: 'Authentication with the model provider failed. The API key for this provider is missing or invalid.',
+  },
 } as const
 
 export type ErrorCode = keyof typeof ERROR_CODES
@@ -43,15 +69,15 @@ export class ExtractionError extends Error {
 
 // Model pricing per 1M tokens
 export const MODEL_PRICING: Record<string, { input: number; output: number }> = {
-  // OpenAI
+  // OpenAI (via Vercel AI Gateway)
   'gpt-4o-mini': { input: 0.15, output: 0.60 },
   'gpt-4o': { input: 2.50, output: 10.00 },
-  // Gemini
-  'gemini-1.5-flash': { input: 0.075, output: 0.30 },
-  'gemini-1.5-pro': { input: 1.25, output: 5.00 },
-  // Anthropic
-  'claude-3-5-haiku-latest': { input: 0.80, output: 4.00 },
-  'claude-sonnet-4-20250514': { input: 3.00, output: 15.00 },
+  // Gemini (via direct Google API)
+  'gemini-2.5-flash': { input: 0.30, output: 2.50 },
+  'gemini-2.5-pro': { input: 1.25, output: 10.00 },
+  // Anthropic (via Vercel AI Gateway)
+  'claude-haiku-4.5': { input: 1.00, output: 5.00 },
+  'claude-sonnet-4.5': { input: 3.00, output: 15.00 },
 }
 
 // Markup percentage (100% margin = 2x cost)
@@ -60,7 +86,9 @@ const MARKUP = 2.00
 // Minimum cost per extraction in USD
 const MINIMUM_COST = 0.01
 
-// Map provider + model to Vercel AI Gateway model string
+// Map provider + model to a model usable by the AI SDK.
+// Gemini uses the direct Google provider (billed via GOOGLE_GENERATIVE_AI_API_KEY).
+// OpenAI and Anthropic route through the Vercel AI Gateway (billed via AI_GATEWAY_API_KEY).
 function getGatewayModel(provider: ModelProvider, model: string): string {
   switch (provider) {
     case 'OPENAI':
@@ -75,6 +103,15 @@ function getGatewayModel(provider: ModelProvider, model: string): string {
     default:
       return 'openai/gpt-4o-mini'
   }
+}
+
+// Resolve the actual model instance/string passed to generateText.
+function resolveModel(provider: ModelProvider, model: string) {
+  if (provider === 'GEMINI') {
+    // Use the direct Google provider so Gemini is billed through Google AI Studio.
+    return google(model)
+  }
+  return getGatewayModel(provider, model)
 }
 
 interface ExtractionField {
@@ -154,7 +191,7 @@ async function executeStandardExtraction(
   config: OrchestrationConfig,
   input: ExtractionInput
 ): Promise<ExtractionOutput> {
-  const gatewayModel = getGatewayModel(config.provider, config.model)
+  const gatewayModel = resolveModel(config.provider, config.model)
   const extractionSchema = buildExtractionSchema(input.fields)
   const prompt = buildExtractionPrompt(input.fields)
 
@@ -208,7 +245,54 @@ async function executeStandardExtraction(
     }
 
     const errorMessage = error instanceof Error ? error.message.toLowerCase() : ''
-    
+
+    // Payment / paid-plan required (free tier blocked or credits depleted)
+    if (
+      errorMessage.includes('prepayment') ||
+      errorMessage.includes('credits are depleted') ||
+      errorMessage.includes('free tier') ||
+      errorMessage.includes('payment required') ||
+      errorMessage.includes('billing') ||
+      errorMessage.includes('quota') ||
+      errorMessage.includes('insufficient_quota') ||
+      errorMessage.includes('upgrade to paid')
+    ) {
+      throw new ExtractionError('PAYMENT_REQUIRED')
+    }
+
+    // Model not found / retired / invalid id
+    if (
+      errorMessage.includes('model not found') ||
+      errorMessage.includes('not found') ||
+      errorMessage.includes('does not exist') ||
+      errorMessage.includes('unknown model') ||
+      errorMessage.includes('no endpoints found') ||
+      errorMessage.includes('unsupported model')
+    ) {
+      throw new ExtractionError('MODEL_NOT_FOUND')
+    }
+
+    // Authentication failures (missing / invalid API key)
+    if (
+      errorMessage.includes('api key') ||
+      errorMessage.includes('unauthorized') ||
+      errorMessage.includes('authentication') ||
+      errorMessage.includes('401') ||
+      errorMessage.includes('invalid_api_key')
+    ) {
+      throw new ExtractionError('MODEL_AUTH_FAILURE')
+    }
+
+    // Rate limiting
+    if (
+      errorMessage.includes('rate limit') ||
+      errorMessage.includes('rate_limit') ||
+      errorMessage.includes('too many requests') ||
+      errorMessage.includes('429')
+    ) {
+      throw new ExtractionError('RATE_LIMITED')
+    }
+
     // Check for model compliance/safety refusal
     if (
       errorMessage.includes('safety') ||
