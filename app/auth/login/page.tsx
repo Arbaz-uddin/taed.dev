@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -24,7 +24,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [captchaToken, setCaptchaToken] = useState<string | null>(null)
   const captchaRef = useRef<HCaptcha>(null)
-  const router = useRouter()
   const supabase = createClient()
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -37,9 +36,10 @@ export default function LoginPage() {
     }
 
     setLoading(true)
+    let redirectStarted = false
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
         options: {
@@ -54,15 +54,26 @@ export default function LoginPage() {
         return
       }
 
-      // Redirect to original page or default to /app
-      router.push(redirect || '/app')
-      router.refresh()
+      if (!data.session) {
+        setError('Login succeeded, but no session was created. Please try again.')
+        return
+      }
+
+      // A full navigation guarantees the newly-created Supabase auth cookies
+      // are included when middleware validates the protected destination.
+      const destination = redirect?.startsWith('/') && !redirect.startsWith('//')
+        ? redirect
+        : '/app'
+      redirectStarted = true
+      window.location.assign(destination)
     } catch {
       setError('An unexpected error occurred')
       captchaRef.current?.resetCaptcha()
       setCaptchaToken(null)
     } finally {
-      setLoading(false)
+      if (!redirectStarted) {
+        setLoading(false)
+      }
     }
   }
 
